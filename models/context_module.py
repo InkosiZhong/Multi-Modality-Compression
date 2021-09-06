@@ -117,19 +117,19 @@ class Entropy_parameter_net(nn.Module):
     Compress residual prior
     '''
 
-    def __init__(self, out_channel_M=192):
+    def __init__(self, out_channel_N=128, out_channel_M=192):
         super(Entropy_parameter_net, self).__init__()
-        self.conv1 = nn.Conv2d(1280, 1024, 1, stride=1, padding=0)
-        torch.nn.init.xavier_normal_(self.conv1.weight.data, (math.sqrt(2 * (768 + 640) / (768 + 768))))
-        torch.nn.init.constant_(self.conv1.bias.data, 0.01)
+        self.conv1 = nn.Conv2d(out_channel_N*2+out_channel_M*2, 640, 1, stride=1, padding=0)
+        #torch.nn.init.xavier_normal_(self.conv1.weight.data, (math.sqrt(2 * (768 + 640) / (768 + 768))))
+        #torch.nn.init.constant_(self.conv1.bias.data, 0.01)
         self.relu1 = nn.LeakyReLU(negative_slope=0.2)
-        self.conv2 = nn.Conv2d(1024, 840, 1, stride=1, padding=0)
-        torch.nn.init.xavier_normal_(self.conv2.weight.data, (math.sqrt(2 * (512 + 640) / (640 + 640))))
-        torch.nn.init.constant_(self.conv2.bias.data, 0.01)
+        self.conv2 = nn.Conv2d(640, 512, 1, stride=1, padding=0)
+        #torch.nn.init.xavier_normal_(self.conv2.weight.data, (math.sqrt(2 * (512 + 640) / (640 + 640))))
+        #torch.nn.init.constant_(self.conv2.bias.data, 0.01)
         self.relu2 = nn.LeakyReLU(negative_slope=0.2)
-        self.conv3 = nn.Conv2d(840, 2*out_channel_M, 1, stride=1, padding=0)
-        torch.nn.init.xavier_normal_(self.conv3.weight.data, (math.sqrt(2 * (512 + 384) / (512 + 512))))
-        torch.nn.init.constant_(self.conv3.bias.data, 0.01)
+        self.conv3 = nn.Conv2d(512, 2*out_channel_M, 1, stride=1, padding=0)
+        #torch.nn.init.xavier_normal_(self.conv3.weight.data, (math.sqrt(2 * (512 + 384) / (512 + 512))))
+        #torch.nn.init.constant_(self.conv3.bias.data, 0.01)
 
     def forward(self, x):
         x = self.relu1(self.conv1(x))

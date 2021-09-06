@@ -1,0 +1,10 @@
+torch >= 1.7
+six
+imageio
+pypng
+matplotlib
+timm
+wandb
+opencv-python
+tensorboardX
+tensorboard

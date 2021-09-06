@@ -112,8 +112,7 @@ def parse_config(config):
             if not enable_wandb:
                 return
             wandb_project = config['wandb']['project']
-            if 'dryrun' in config['wandb']:
-                import os
+            if 'dryrun' in config['wandb'] and config['wandb']['dryrun']:
                 os.environ["WANDB_MODE"] = "dryrun"
             if 'recovery' in config['wandb']:
                 wandb_recovery = config['wandb']['recovery']

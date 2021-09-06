@@ -9,8 +9,8 @@
     },
     "batch_size": 4,
     "print_freq": 1000,
-    "out_channel_N": 320,
-    "out_channel_M": 320,
+    "out_channel_N": 192,
+    "out_channel_M": 192,
     "save_model_freq": 50000,
     "cal_step": 400,
 

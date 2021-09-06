@@ -45,7 +45,7 @@ class ImageCompressor(nn.Module):
         self.priorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)
         self.bitEstimator_z = BitEstimator(out_channel_N)
         self.context_prediction = Context_prediction_net(out_channel_M=out_channel_M)
-        self.entropy_parameters = Entropy_parameter_net(out_channel_M=out_channel_M)
+        self.entropy_parameters = Entropy_parameter_net(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.out_channel_N = out_channel_N
         self.out_channel_M = out_channel_M
 
