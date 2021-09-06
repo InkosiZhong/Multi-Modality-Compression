@@ -19,6 +19,7 @@ wandb_project = "TAVC"
 wandb_recovery = ""
 
 train_data_dir = "../datasets/Flick_patch"
+test_data_dir = "../datasets/kodak"
 
 # gpu_num = 4
 gpu_num = torch.cuda.device_count()
@@ -88,14 +89,16 @@ def parse_config(config):
     if 'out_channel_M' in config:
         out_channel_M = config['out_channel_M']
 
-    global train_data_dir
+    global train_data_dir, test_data_dir
     if "train_dataset" in config:
         train_data_dir = config['train_dataset']
+    if "test_data_dir" in config:
+        test_data_dir = config['test_dataset']
     
     global home, enable_wandb, wandb_project, wandb_recovery
     run_name = config['run_name'] if 'run_name' in config else 'unknown'
     home += run_name
-    if not (args.test or args.testuvg or args.testmcl or args.testauc):
+    if not args.test:
         if not os.path.exists(home):
             os.mkdir(home)
         else:
@@ -104,11 +107,16 @@ def parse_config(config):
             os.mkdir(home + "/snapshot") # to save model
         else:
             print("snapshot dir is already exists.")
-        if 'enable_wandb' in config and 'wandb_project' in config:
-            enable_wandb = config['enable_wandb']
-            wandb_project = config['wandb_project']
-            if 'wandb_recovery' in config:
-                wandb_recovery = config['wandb_recovery']
+        if 'wandb' in config and 'enable' in config['wandb'] and 'project' in config['wandb']:
+            enable_wandb = config['wandb']['enable']
+            if not enable_wandb:
+                return
+            wandb_project = config['wandb']['project']
+            if 'dryrun' in config['wandb']:
+                import os
+                os.environ["WANDB_MODE"] = "dryrun"
+            if 'recovery' in config['wandb']:
+                wandb_recovery = config['wandb']['recovery']
                 print('recovery wandb to task: ', wandb_recovery)
             if wandb_recovery == "":
                 wandb.init(sync_tensorboard=True, project=wandb_project, name=run_name)
@@ -141,34 +149,37 @@ def train(epoch, global_step):
     # log_time = 0
 
     # AMP
-    scaler = torch.cuda.amp.GradScaler()
+    #scaler = torch.cuda.amp.GradScaler()
 
     for batch_idx, input in enumerate(train_loader):
-        with torch.cuda.amp.autocast():
-            input = input.cuda()
-            start_time = time.time()
-            global_step += 1
-            # print("debug", torch.max(input), torch.min(input))
-            clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
-            # print("debug", clipped_recon_image.shape, " ", mse_loss.shape, " ", bpp.shape)
-            # print("debug", mse_loss, " ", bpp_feature, " ", bpp_z, " ", bpp)
-            distribution_loss = bpp
-            distortion = mse_loss
-            rd_loss = train_lambda * distortion + distribution_loss
-            #optimizer.zero_grad()
-            #rd_loss.backward()
-            def clip_gradient(optimizer, grad_clip):
-                for group in optimizer.param_groups:
-                    for param in group["params"]:
-                        if param.grad is not None:
-                            param.grad.data.clamp_(-grad_clip, grad_clip)
-            #clip_gradient(optimizer, 5)
-            #optimizer.step()
-            # model_time += (time.time()-start_time)
+        #with torch.cuda.amp.autocast():
+        #torch.autograd.set_detect_anomaly(True) #debug
+        input = input.cuda()
+        start_time = time.time()
+        global_step += 1
+        # print("debug", torch.max(input), torch.min(input))
+        clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
+        # print("debug", clipped_recon_image.shape, " ", mse_loss.shape, " ", bpp.shape)
+        # print("debug", mse_loss, " ", bpp_feature, " ", bpp_z, " ", bpp)
+        distribution_loss = bpp
+        distortion = mse_loss
+        rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
-        scaler.scale(rd_loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
+        rd_loss.backward()
+        def clip_gradient(optimizer, grad_clip):
+            for group in optimizer.param_groups:
+                for param in group["params"]:
+                    if param.grad is not None:
+                        param.grad.data.clamp_(-grad_clip, grad_clip)
+        clip_gradient(optimizer, 5)
+        optimizer.step()
+        # model_time += (time.time()-start_time)
+        #optimizer.zero_grad()
+        #clip_gradient(optimizer, 5)
+        #with torch.autograd.detect_anomaly(): # debug
+        #scaler.scale(rd_loss).backward()
+        #scaler.step(optimizer)
+        #scaler.update()
         if (global_step % cal_step) == 0:
             # t0 = time.time()
             if mse_loss.item() > 0:
@@ -295,7 +306,7 @@ if __name__ == "__main__":
     net = torch.nn.DataParallel(net, list(range(gpu_num)))
     parameters = net.parameters()
     global test_loader
-    test_dataset = TestKodakDataset(data_dir='/data1/liujiaheng/data/compression/kodak')
+    test_dataset = TestKodakDataset(test_data_dir)
     test_loader = DataLoader(dataset=test_dataset, shuffle=False, batch_size=1, pin_memory=True, num_workers=1)
     if args.test:
         testKodak(global_step)

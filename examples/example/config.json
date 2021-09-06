@@ -15,9 +15,13 @@
     "cal_step": 400,
 
     "train_dataset": "../datasets/Flick_patch",
+    "test_dataset": "../datasets/kodak",
 
     "run_name": "000_baseline",
-    "enable_wandb": true,
-    "wandb_project": "MDMC",
-    "wandb_recovery": ""
+    "wandb": {
+        "enable": true,
+        "project": "MDMC",
+        "recovery": "",
+        "dryrun": false
+    }
 }

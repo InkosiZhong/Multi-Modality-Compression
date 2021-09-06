@@ -23,6 +23,23 @@ class LowerBound(Function):
         pass_through = pass_through_1 | pass_through_2
         return pass_through.type(grad_output.dtype) * grad_output, None
 
+class LowerBoundModule(nn.Module):
+    def init(self):
+        self.inputs = None
+        self.b = None
+
+    def forward(self, inputs, bound):
+        b = torch.ones_like(inputs) * bound
+        self.inputs, self.b = inputs, b
+        return torch.max(inputs, b)
+        
+
+    def backward(self, grad_output):
+        pass_through_1 = self.inputs >= self.b
+        pass_through_2 = grad_output < 0
+
+        pass_through = pass_through_1 | pass_through_2
+        return pass_through.type(grad_output.dtype) * grad_output, None
 
 class GDN(nn.Module):
     """Generalized divisive normalization layer.
@@ -40,6 +57,8 @@ class GDN(nn.Module):
         self.beta_min = beta_min
         self.gamma_init = gamma_init
         self.reparam_offset = reparam_offset
+
+        #self.lower_bound = LowerBoundModule()
 
         self.build(ch)
 
@@ -72,10 +91,12 @@ class GDN(nn.Module):
 
         # Beta bound and reparam
         beta = LowerBound.apply(self.beta, self.beta_bound)
+        #beta = self.lower_bound(self.beta, self.beta_bound)
         beta = beta**2 - self.pedestal
 
         # Gamma bound and reparam
         gamma = LowerBound.apply(self.gamma, self.gamma_bound)
+        #gamma = self.lower_bound(self.gamma, self.gamma_bound)
         gamma = gamma**2 - self.pedestal
         gamma = gamma.view(ch, ch, 1, 1)
 
