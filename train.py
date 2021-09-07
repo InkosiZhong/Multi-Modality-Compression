@@ -196,7 +196,7 @@ def train(epoch, global_step):
             ir_mse_losses.update(ir_mse_loss.item())
 
         if (global_step % print_freq) == 0:
-            train_logger(global_step, epoch, cur_lr, losses, elapsed, bpps, \
+            train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, \
                 rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, \
                 ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features)
 

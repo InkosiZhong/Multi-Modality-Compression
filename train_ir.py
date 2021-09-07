@@ -172,7 +172,7 @@ def train(epoch, global_step):
             mse_losses.update(mse_loss.item())
 
         if (global_step % print_freq) == 0:
-            train_logger(global_step, epoch, cur_lr, losses, elapsed, None, \
+            train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, None, \
                 None, None, None, None, None, \
                 psnrs, mse_losses, bpps, bpp_zs, bpp_features)
 
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
-        
+
     net = model.cuda()
     logger.info(net)
     net = torch.nn.DataParallel(net, list(range(gpu_num)))
@@ -256,7 +256,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(parameters, lr=base_lr)
 
     global train_ir_loader
-    tb_logger = SummaryWriter(home + 'events/')
+    tb_logger = SummaryWriter(home + '/events/')
 
     _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2)
 

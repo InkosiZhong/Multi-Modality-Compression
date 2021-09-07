@@ -172,7 +172,7 @@ def train(epoch, global_step):
             mse_losses.update(mse_loss.item())
 
         if (global_step % print_freq) == 0:
-            train_logger(global_step, epoch, cur_lr, losses, elapsed, None, \
+            train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, None, \
                 psnrs, mse_losses, bpps, bpp_zs, bpp_features, \
                 None, None, None, None, None)
             
