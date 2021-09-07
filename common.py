@@ -40,10 +40,12 @@ out_channel_M = 320
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
-'''parser.add_argument('-n', '--name', default='',
-        help='output training details')'''
 parser.add_argument('-p', '--pretrain', default = '',
         help='load pretrain model')
+parser.add_argument('-r', '--pretrain_rgb', default = '',
+        help='load rgb pretrain model')
+parser.add_argument('-i', '--pretrain_ir', default = '',
+        help='load ir pretrain model')
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')

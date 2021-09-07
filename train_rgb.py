@@ -114,6 +114,9 @@ if __name__ == "__main__":
 
     model = MultiCompression(in_channel1=3, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
 
+    if args.pretrain_rgb != '':
+        logger.info("loading model:{}".format(args.pretrain_rgb))
+        global_step = load_model(model, args.pretrain_rgb)
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
