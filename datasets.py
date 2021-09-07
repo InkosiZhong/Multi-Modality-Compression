@@ -11,8 +11,9 @@ from torch.utils.data import DataLoader
 
 
 class Datasets(Dataset):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, channels=3):
         self.data_dir = data_dir
+        self.channels = channels
 
         if not os.path.exists(data_dir):
             raise Exception(f"[!] {self.data_dir} not exitd")
@@ -21,7 +22,10 @@ class Datasets(Dataset):
 
     def __getitem__(self, item):
         image_ori = self.image_path[item]
-        image = Image.open(image_ori).convert('RGB')
+        if self.channels == 1:
+            image = Image.open(image_ori).convert('L')
+        else:
+            image = Image.open(image_ori).convert('RGB')
         transform = transforms.Compose([
             # transforms.RandomResizedCrop(self.image_size),
             # transforms.RandomHorizontalFlip(),
@@ -35,67 +39,31 @@ class Datasets(Dataset):
         return len(self.image_path)
 
 
-def get_loader(train_data_dir, test_data_dir, image_size, batch_size):
-    train_dataset = Datasets(train_data_dir, image_size)
-    test_dataset = Datasets(test_data_dir, image_size)
-
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=batch_size,
-                                               shuffle=True)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                              batch_size=batch_size,
-                                              shuffle=False)
-    return train_loader, test_loader
-
-
-def get_train_loader(train_data_dir, image_size, batch_size):
-    train_dataset = Datasets(train_data_dir, image_size)
-    torch.manual_seed(3334)
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=batch_size,
-                                               shuffle=True,
-                                               pin_memory=True)
-    return train_dataset, train_loader
-
-class TestKodakDataset(Dataset):
-    def __init__(self, data_dir):
-        self.data_dir = data_dir
-        if not os.path.exists(data_dir):
-            raise Exception(f"[!] {self.data_dir} not exitd")
-        self.image_path = sorted(glob(os.path.join(self.data_dir, "*.*")))
-
-    def __getitem__(self, item):
-        image_ori = self.image_path[item]
-        image = Image.open(image_ori).convert('RGB')
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-        ])
-        return transform(image)
-
-    def __len__(self):
-        return len(self.image_path)
-
-'''def build_dataset():
-    train_set_dir = '/data1/liujiaheng/data/compression/Flick_patch/'
-    dataset, dataloader = get_train_loader(train_set_dir, 256, 4)
-    for batch_idx, (image, path) in enumerate(dataloader):
-        pdb.set_trace()'''
-
-
 def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
-    rgb_dataset = Datasets(rgb_dir)
-    rgb_loader = DataLoader(dataset=rgb_dataset,
-                                   batch_size=batch_size,
-                                   shuffle=False,
-                                   pin_memory=True,
-                                   num_workers=num_workders)
-    ir_dataset = Datasets(ir_dir)
-    ir_loader = DataLoader(dataset=ir_dataset,
-                                   batch_size=batch_size,
-                                   shuffle=False,
-                                   pin_memory=True,
-                                   num_workers=num_workders)
-    return rgb_loader, ir_loader, len(rgb_dataset) // batch_size
+    n = 0
+    if rgb_dir is not None:
+        rgb_dataset = Datasets(rgb_dir)
+        rgb_loader = DataLoader(dataset=rgb_dataset,
+                                batch_size=batch_size,
+                                shuffle=False,
+                                pin_memory=True,
+                                num_workers=num_workders)
+        n = len(rgb_dataset) // batch_size
+    else:
+        rgb_loader = None
+    
+    if ir_dir is not None:
+        ir_dataset = Datasets(ir_dir, channels=1)
+        ir_loader = DataLoader(dataset=ir_dataset,
+                                batch_size=batch_size,
+                                shuffle=False,
+                                pin_memory=True,
+                                num_workers=num_workders)
+        n = len(ir_dataset) // batch_size
+    else:
+        ir_loader = None
+
+    return rgb_loader, ir_loader, n
 
 if __name__ == '__main__':
     build_dataset()
