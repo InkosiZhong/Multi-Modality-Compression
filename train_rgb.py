@@ -14,6 +14,7 @@ home = "./experiments/"
 enable_wandb = True
 wandb_project = "TAVC"
 wandb_recovery = ""
+tb_logger = None
 
 train_data_dir = "../datasets/FLIR/train/"
 test_data_dir = "../datasets/FLIR/val/"
@@ -87,6 +88,10 @@ def parse_config(args):
         train_data_dir = config['train_dataset']
     if "test_data_dir" in config:
         test_data_dir = config['test_dataset']
+
+    global test_num
+    if "test_num" in config:
+        test_num = config['test_num']
 
     global train_rgb_dir, test_rgb_dir
     train_rgb_dir = train_data_dir + "/RGB/"

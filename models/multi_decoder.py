@@ -1,5 +1,4 @@
 #!/Library/Frameworks/Python.framework/Versions/3.5/bin/python3.5
-import math
 import torch.nn as nn
 import torch
 from .GDN import GDN
@@ -36,15 +35,15 @@ class MultiDecoder(nn.Module):
     def forward(self, rgb, ir):
         rgb = self.rgb_igdn1(self.rgb_deconv1(rgb))
         ir = self.ir_igdn1(self.ir_deconv1(ir))
-        rgb = self.fusion_conv1(torch.cat([rgb, ir]))
+        rgb = self.fusion_conv1(torch.cat([rgb, ir], dim=1))
 
         rgb = self.rgb_igdn2(self.rgb_deconv2(rgb))
         ir = self.ir_igdn2(self.ir_deconv2(ir))
-        rgb = self.fusion_conv2(torch.cat([rgb, ir]))
+        rgb = self.fusion_conv2(torch.cat([rgb, ir], dim=1))
 
         rgb = self.rgb_igdn3(self.rgb_deconv3(rgb))
         ir = self.ir_igdn3(self.ir_deconv3(ir))
-        rgb = self.fusion_conv3(torch.cat([rgb, ir]))
+        rgb = self.fusion_conv3(torch.cat([rgb, ir], dim=1))
 
         rgb = self.rgb_deconv4(rgb)
         ir = self.ir_deconv4(ir) 

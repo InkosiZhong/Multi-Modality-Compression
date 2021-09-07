@@ -5,7 +5,7 @@ from datasets import build_dataset
 from tensorboardX import SummaryWriter
 from Meter import AverageMeter
 import numpy as np
-from model4rgb import *
+from model import *
 from common import *
 
 torch.backends.cudnn.enabled = True
@@ -14,6 +14,7 @@ home = "./experiments/"
 enable_wandb = True
 wandb_project = "TAVC"
 wandb_recovery = ""
+tb_logger = None
 
 train_data_dir = "../datasets/FLIR/train/"
 test_data_dir = "../datasets/FLIR/val/"
@@ -38,6 +39,7 @@ global_step = 0
 save_model_freq = 50000
 out_channel_N = 192
 out_channel_M = 320
+test_num = -1
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
@@ -94,6 +96,10 @@ def parse_config(args):
         train_data_dir = config['train_dataset']
     if "test_data_dir" in config:
         test_data_dir = config['test_dataset']
+
+    global test_num
+    if "test_num" in config:
+        test_num = config['test_num']
 
     global train_rgb_dir, train_ir_dir, test_rgb_dir, test_ir_dir
     train_rgb_dir = train_data_dir + "/RGB/"
@@ -229,7 +235,7 @@ def test(step):
                 rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
             rgb_mse_loss, ir_mse_loss, rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp, bpp = \
                 torch.mean(rgb_mse_loss), torch.mean(ir_mse_loss), torch.mean(rgb_bpp_feature), torch.mean(ir_bpp_feature), \
-                    torch.mean(rgb_bpp_z), torch.mean(ir_bpp_z), torch.mean(rgb_bpp), torch.mean(ir_bpp), torch.mean(bpp)
+                    torch.mean(rgb_bpp_z), torch.mean(ir_bpp_z), torch.mean(rgb_bpp), torch.mean(ir_bpp), torch.mean(rgb_bpp + ir_bpp)
             sumBpp += bpp
             rgb_psnr = 10 * (torch.log(1. / rgb_mse_loss) / np.log(10))
             rgb_sumBpp += rgb_bpp
@@ -238,16 +244,16 @@ def test(step):
             ir_sumBpp += ir_bpp
             ir_sumPsnr += ir_psnr
 
-            def cal_msssim(recon):
+            def cal_msssim(recon, input):
                 msssim = ms_ssim(recon.cpu().detach(), input.cpu(), data_range=1.0, size_average=True)
                 msssimDB = -10 * (torch.log(1-msssim) / np.log(10))
                 return msssim, msssimDB
 
-            rgb_msssim, rgb_msssimDB = cal_msssim(rgb_clipped_recon_image)
+            rgb_msssim, rgb_msssimDB = cal_msssim(rgb_clipped_recon_image, rgb_input)
             rgb_sumMsssimDB += rgb_msssimDB
             rgb_sumMsssim += rgb_msssim
             
-            ir_msssim, ir_msssimDB = cal_msssim(ir_clipped_recon_image)
+            ir_msssim, ir_msssimDB = cal_msssim(ir_clipped_recon_image, ir_input)
             ir_sumMsssimDB += ir_msssimDB
             ir_sumMsssim += ir_msssim
             logger.info("Bpp:{:.6f}, Bpp(rgb):{:.6f}, Bpp(ir):{:.6f}, \

@@ -5,7 +5,7 @@ from datasets import build_dataset
 from tensorboardX import SummaryWriter
 from Meter import AverageMeter
 import numpy as np
-from model4rgb import *
+from model4ir import *
 from common import *
 
 torch.backends.cudnn.enabled = True
@@ -14,6 +14,7 @@ home = "./experiments/"
 enable_wandb = True
 wandb_project = "TAVC"
 wandb_recovery = ""
+tb_logger = None
 
 train_data_dir = "../datasets/FLIR/train/"
 test_data_dir = "../datasets/FLIR/val/"
@@ -38,8 +39,8 @@ out_channel_M = 320
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
-parser.add_argument('-i', '--pretrain_ir', default = '',
-        help='load ir pretrain model')
+parser.add_argument('-p', '--pretrain', default = '',
+        help='load pretrain model')
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
@@ -255,6 +256,8 @@ if __name__ == "__main__":
     optimizer = optim.Adam(parameters, lr=base_lr)
 
     global train_ir_loader
+    tb_logger = SummaryWriter(home + '/events/')
+    
     _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2)
 
     steps_epoch = global_step // n

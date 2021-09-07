@@ -21,14 +21,14 @@ class MultiCompression(nn.Module):
         self.out_channel_N = out_channel_N
         self.out_channel_M = out_channel_M
 
-    def forward(self, input_rgb, input_ir):
+    def forward(self, input_ir):
         # encoder
         ir_feature = self.encoder(input_ir)
         batch_size = ir_feature.size()[0]
 
         #ir 
-        ir_quant_noise_feature = torch.zeros(input_ir.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
-        ir_quant_noise_z = torch.zeros(input_ir.size(0), self.out_channel_N, input_rgb.size(2) // 64, input_rgb.size(3) // 64).cuda()
+        ir_quant_noise_feature = torch.zeros(input_ir.size(0), self.out_channel_M, input_ir.size(2) // 8, input_ir.size(3) // 8).cuda()
+        ir_quant_noise_z = torch.zeros(input_ir.size(0), self.out_channel_N, input_ir.size(2) // 32, input_ir.size(3) // 32).cuda()
         ir_quant_noise_feature = torch.nn.init.uniform_(torch.zeros_like(ir_quant_noise_feature), -0.5, 0.5)
         ir_quant_noise_z = torch.nn.init.uniform_(torch.zeros_like(ir_quant_noise_z), -0.5, 0.5)
         ir_z = self.irPriorEncoder(ir_feature)

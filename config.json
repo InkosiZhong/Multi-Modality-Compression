@@ -15,9 +15,10 @@
     "cal_step": 400,
 
     "train_dataset": "../datasets/FLIR/train",
-    "test_dataset": "../datasets/FLIR/val",
+    "test_dataset": "../datasets/FLIR/test",
+    "test_num": 25,
 
-    "run_name": "000_baseline",
+    "run_name": "000_baseline_FLIR",
     "wandb": {
         "enable": true,
         "project": "MDMC",

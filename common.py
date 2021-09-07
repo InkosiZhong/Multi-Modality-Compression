@@ -27,20 +27,20 @@ def train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapse
     log = f'Step [{global_step}/{tot_step}={process:.2f}%]'
     log += f' | Epoch {epoch}'
     if elapsed is not None:
-        log += f' | time {elapsed.val:.5f} ({elapsed.avg:.3f})'
+        log += f' | time {elapsed.val:.3f} ({elapsed.avg:.3f})'
     if cur_lr is not None:
         tb_logger.add_scalar('lr', cur_lr, global_step) 
         log += f' | lr {cur_lr}'
-    log = create_train_log(log, global_step, 'rd_loss', losses, 3)
-    log = create_train_log(log, global_step, 'psnr(rgb)', rgb_psnrs, 3)
-    log = create_train_log(log, global_step, 'psnr(ir)', ir_psnrs, 3)
-    log = create_train_log(log, global_step, 'bpp', bpps)
-    log = create_train_log(log, global_step, 'bpp(rgb)', rgb_bpps)
-    log = create_train_log(log, global_step, 'bpp(ir)', ir_bpps)
-    log = create_train_log(log, global_step, 'bpp_feature(rgb)', rgb_bpp_features)
-    log = create_train_log(log, global_step, 'bpp_feature(ir)', ir_bpp_features)
-    log = create_train_log(log, global_step, 'bpp_z(rgb)', rgb_bpp_zs)
-    log = create_train_log(log, global_step, 'bpp_z(ir)', ir_bpp_zs)
+    log = create_train_log(tb_logger, log, global_step, 'rd_loss', losses, 3)
+    log = create_train_log(tb_logger, log, global_step, 'psnr(rgb)', rgb_psnrs, 3)
+    log = create_train_log(tb_logger, log, global_step, 'psnr(ir)', ir_psnrs, 3)
+    log = create_train_log(tb_logger, log, global_step, 'bpp', bpps)
+    log = create_train_log(tb_logger, log, global_step, 'bpp(rgb)', rgb_bpps)
+    log = create_train_log(tb_logger, log, global_step, 'bpp(ir)', ir_bpps)
+    log = create_train_log(tb_logger, log, global_step, 'bpp_feature(rgb)', rgb_bpp_features)
+    log = create_train_log(tb_logger, log, global_step, 'bpp_feature(ir)', ir_bpp_features)
+    log = create_train_log(tb_logger, log, global_step, 'bpp_z(rgb)', rgb_bpp_zs)
+    log = create_train_log(tb_logger, log, global_step, 'bpp_z(ir)', ir_bpp_zs)
     if rgb_mse_losses is not None:
         log += f' | rgb_mse_loss {rgb_mse_losses.val:.5f} ({rgb_mse_losses.avg:.5f})'
     if ir_mse_losses is not None:
@@ -62,15 +62,15 @@ def test_logger(tb_logger, step, cnt, bpps, # both
 
     logger.info("Test: model-{}".format(step))
     log = "Dataset Average result"
-    log = create_test_log(log, step, 'bpp-test', bpps, cnt)
-    log = create_test_log(log, step, 'bpp-test(rgb)', rgb_bpps, cnt)
-    log = create_test_log(log, step, 'psnr-test(rgb)', rgb_psnrs, cnt)
-    log = create_test_log(log, step, 'ms-ssim-test(rgb)', rgb_msssims, cnt)
-    log = create_test_log(log, step, 'ms-ssim-db-test(rgb)', rgb_msssimsDB, cnt)
-    log = create_test_log(log, step, 'bpp-test(ir)', ir_bpps, cnt)
-    log = create_test_log(log, step, 'psnr-test(ir)', ir_psnrs, cnt)
-    log = create_test_log(log, step, 'ms-ssim-test(ir)', ir_msssims, cnt)
-    log = create_test_log(log, step, 'ms-ssim-db-test(ir)', ir_msssimsDB, cnt)
+    log = create_test_log(tb_logger, log, step, 'bpp-test', bpps, cnt)
+    log = create_test_log(tb_logger, log, step, 'bpp-test(rgb)', rgb_bpps, cnt)
+    log = create_test_log(tb_logger, log, step, 'psnr-test(rgb)', rgb_psnrs, cnt)
+    log = create_test_log(tb_logger, log, step, 'ms-ssim-test(rgb)', rgb_msssims, cnt)
+    log = create_test_log(tb_logger, log, step, 'ms-ssim-db-test(rgb)', rgb_msssimsDB, cnt)
+    log = create_test_log(tb_logger, log, step, 'bpp-test(ir)', ir_bpps, cnt)
+    log = create_test_log(tb_logger, log, step, 'psnr-test(ir)', ir_psnrs, cnt)
+    log = create_test_log(tb_logger, log, step, 'ms-ssim-test(ir)', ir_msssims, cnt)
+    log = create_test_log(tb_logger, log, step, 'ms-ssim-db-test(ir)', ir_msssimsDB, cnt)
     
     logger.info(log)
 
