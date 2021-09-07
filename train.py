@@ -514,11 +514,11 @@ if __name__ == "__main__":
     logger.info('Branch: Master')
 
     if args.rgb:
-        model = ImageCompressor(3, out_channel_N, out_channel_M)
+        model = ImageCompressor(img_channel=3, stride1=2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
     elif args.ir:
-        model = ImageCompressor(1, out_channel_N, out_channel_M)
+        model = ImageCompressor(img_channel=1, stride=1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
     else:
-        model = MultiCompression(3, 1, out_channel_N, out_channel_M)
+        model = MultiCompression(in_channel1=3, in_channel2=1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
 
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
