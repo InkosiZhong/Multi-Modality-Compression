@@ -9,9 +9,9 @@ class Analysis_net(nn.Module):
     '''
     Analysis net
     '''
-    def __init__(self, in_channel, out_channel_N=192, out_channel_M=320):
+    def __init__(self, in_channel, stride1=2, out_channel_N=192, out_channel_M=320):
         super(Analysis_net, self).__init__()
-        self.conv1 = nn.Conv2d(in_channel, out_channel_N, 5, stride=2, padding=2)
+        self.conv1 = nn.Conv2d(in_channel, out_channel_N, 5, stride=stride1, padding=2)
         torch.nn.init.xavier_normal_(self.conv1.weight.data, (math.sqrt(2 * (3 + out_channel_N) / (6))))
         torch.nn.init.constant_(self.conv1.bias.data, 0.01)
         self.gdn1 = GDN(out_channel_N)

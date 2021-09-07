@@ -150,10 +150,13 @@ def adjust_learning_rate(optimizer, global_step):
         param_group['lr'] = lr
 
 
-def create_train_log(log, prefix, value):
+def create_train_log(log, prefix, value, k=5):
     if value is not None:
         tb_logger.add_scalar(prefix, value.avg, global_step)
-        log += f' | {prefix} {value.val:.3f} ({value.avg:.3f})'
+        if k == 3:
+            log += f' | {prefix} {value.val:.3f} ({value.avg:.3f})'
+        else:
+            log += f' | {prefix} {value.val:.5f} ({value.avg:.5f})'
     return log
 
 
@@ -164,12 +167,14 @@ def train_logger(global_step, cur_lr, losses, elapsed, bpps, # both
     process = global_step / tot_step * 100.0
     log = f'Step [{global_step}/{tot_step}={process:.2f}%]'
     log += f' | Epoch {epoch}'
+    if elapsed is not None:
+        log += f' | time {elapsed.val:.5f} ({elapsed.avg:.3f}'
     if cur_lr is not None:
         tb_logger.add_scalar('lr', cur_lr, global_step)
-        log += f' | Lr {cur_lr}'
-    log = create_train_log(log, 'rd_loss', losses)
-    log = create_train_log(log, 'psnr(rgb)', rgb_psnrs)
-    log = create_train_log(log, 'psnr(ir)', ir_psnrs)
+        log += f' | lr {cur_lr}'
+    log = create_train_log(log, 'rd_loss', losses, 3)
+    log = create_train_log(log, 'psnr(rgb)', rgb_psnrs, 3)
+    log = create_train_log(log, 'psnr(ir)', ir_psnrs, 3)
     log = create_train_log(log, 'bpp', bpps)
     log = create_train_log(log, 'bpp(rgb)', rgb_bpps)
     log = create_train_log(log, 'bpp(ir)', ir_bpps)

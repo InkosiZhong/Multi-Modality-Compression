@@ -26,7 +26,7 @@ class MultiDecoder(nn.Module):
         self.ir_igdn2 = GDN(out_channel_N, inverse=True)
         self.ir_deconv3 = nn.ConvTranspose2d(out_channel_N, out_channel_N, 5, stride=2, padding=2, output_padding=1)
         self.ir_igdn3 = GDN(out_channel_N, inverse=True)
-        self.ir_deconv4 = nn.ConvTranspose2d(out_channel_N, out_channel2, 5, stride=2, padding=2, output_padding=1)
+        self.ir_deconv4 = nn.ConvTranspose2d(out_channel_N, out_channel2, 5, stride=1, padding=2, output_padding=0)
 
     def forward(self, rgb, ir):
         # rgb

@@ -9,7 +9,7 @@ class Synthesis_net(nn.Module):
     '''
     Decode synthesis
     '''
-    def __init__(self, out_channel, out_channel_N=192, out_channel_M=320):
+    def __init__(self, out_channel, stride1=2, out_channel_N=192, out_channel_M=320):
         super(Synthesis_net, self).__init__()
         self.deconv1 = nn.ConvTranspose2d(out_channel_M, out_channel_N, 5, stride=2, padding=2, output_padding=1)
         torch.nn.init.xavier_normal_(self.deconv1.weight.data, (math.sqrt(2 * 1 * (out_channel_M + out_channel_N) / (out_channel_M + out_channel_M))))
@@ -23,7 +23,7 @@ class Synthesis_net(nn.Module):
         torch.nn.init.xavier_normal_(self.deconv3.weight.data, math.sqrt(2 * 1))
         torch.nn.init.constant_(self.deconv3.bias.data, 0.01)
         self.igdn3 = GDN(out_channel_N, inverse=True)
-        self.deconv4 = nn.ConvTranspose2d(out_channel_N, out_channel, 5, stride=2, padding=2, output_padding=1)
+        self.deconv4 = nn.ConvTranspose2d(out_channel_N, out_channel, 5, stride=stride1, padding=2, output_padding=(1 if stride1 == 2 else 0))
         torch.nn.init.xavier_normal_(self.deconv4.weight.data, (math.sqrt(2 * 1 * (out_channel_N + 3) / (out_channel_N + out_channel_N))))
         torch.nn.init.constant_(self.deconv4.bias.data, 0.01)
         # self.resDecoder = nn.Sequential(

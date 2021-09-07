@@ -17,7 +17,7 @@ class MultiEncoder(nn.Module):
         self.rgb_gdn3 = GDN(out_channel_N)
         self.rgb_conv4 = nn.Conv2d(out_channel_N, out_channel_M, 5, stride=2, padding=2)
         # ir
-        self.ir_conv1 = nn.Conv2d(in_channel2, out_channel_N, 5, stride=2, padding=2)
+        self.ir_conv1 = nn.Conv2d(in_channel2, out_channel_N, 5, stride=1, padding=2)
         self.ir_gdn1 = GDN(out_channel_N)
         self.ir_conv2 = nn.Conv2d(out_channel_N, out_channel_N, 5, stride=2, padding=2)
         self.ir_gdn2 = GDN(out_channel_N)

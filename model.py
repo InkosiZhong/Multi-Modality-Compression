@@ -37,10 +37,10 @@ def load_model(model, f):
 
 
 class ImageCompressor(nn.Module):
-    def __init__(self, img_channel=3, out_channel_N=192, out_channel_M=192):
+    def __init__(self, img_channel=3, stride1=2, out_channel_N=192, out_channel_M=192):
         super(ImageCompressor, self).__init__()
-        self.Encoder = Analysis_net(in_channel=img_channel, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
-        self.Decoder = Synthesis_net(out_channel=img_channel, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.Encoder = Analysis_net(in_channel=img_channel, stride1=stride1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.Decoder = Synthesis_net(out_channel=img_channel, stride1=stride1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.priorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.priorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)
         self.bitEstimator_z = BitEstimator(out_channel_N)
