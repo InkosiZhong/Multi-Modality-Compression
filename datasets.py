@@ -82,19 +82,19 @@ class TestKodakDataset(Dataset):
         pdb.set_trace()'''
 
 
-def build_dataset(rgb_dir, ir_dir, batch_size, num_workder):
+def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
     rgb_dataset = Datasets(rgb_dir)
     rgb_loader = DataLoader(dataset=rgb_dataset,
                                    batch_size=batch_size,
                                    shuffle=False,
                                    pin_memory=True,
-                                   num_worker=num_workder)
+                                   num_workers=num_workders)
     ir_dataset = Datasets(ir_dir)
     ir_loader = DataLoader(dataset=ir_dataset,
                                    batch_size=batch_size,
                                    shuffle=False,
                                    pin_memory=True,
-                                   num_worker=num_workder)
+                                   num_workers=num_workders)
     return rgb_loader, ir_loader, len(rgb_dataset) // batch_size
 
 if __name__ == '__main__':
