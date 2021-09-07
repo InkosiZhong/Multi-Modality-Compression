@@ -5,38 +5,9 @@ import json
 import logging
 import wandb
 
-home = "./experiments/"
-enable_wandb = True
-wandb_project = "TAVC"
-wandb_recovery = ""
-
-train_data_dir = "../datasets/FLIR/train/"
-test_data_dir = "../datasets/FLIR/val/"
-train_rgb_dir = train_data_dir + "/RGB/"
-train_ir_dir = train_data_dir + "/IR/"
-test_rgb_dir = test_data_dir + "/RGB/"
-test_ir_dir = test_data_dir + "/IR/"
-
-# gpu_num = 4
 gpu_num = torch.cuda.device_count()
-cur_lr = base_lr = 1e-4#  * gpu_num
-train_lambda = 8192
-print_freq = 100
-cal_step = 40
-warmup_step = 0#  // gpu_num
-batch_size = 4
-tot_epoch = 1000000
-tot_step = 2500000
-decay_interval = 2200000
-lr_decay = 0.1
-rgb_size = 256
-ir_size = 128
 logger = logging.getLogger("MDMC")
 tb_logger = None
-global_step = 0
-save_model_freq = 50000
-out_channel_N = 192
-out_channel_M = 320
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
@@ -200,7 +171,7 @@ def test_logger(step, cnt, bpps, # both
     log = create_test_log(log, step, 'bpp-test(rgb)', rgb_bpps, cnt)
     log = create_test_log(log, step, 'psnr-test(rgb)', rgb_psnrs, cnt)
     log = create_test_log(log, step, 'ms-ssim-test(rgb)', rgb_msssims, cnt)
-    log = create_test_log(log, step, 'ms-ssim-db-test(ir)', ir_msssimsDB, cnt)
+    log = create_test_log(log, step, 'ms-ssim-db-test(rgb)', rgb_msssimsDB, cnt)
     log = create_test_log(log, step, 'bpp-test(ir)', ir_bpps, cnt)
     log = create_test_log(log, step, 'psnr-test(ir)', ir_psnrs, cnt)
     log = create_test_log(log, step, 'ms-ssim-test(ir)', ir_msssims, cnt)
