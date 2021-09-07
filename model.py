@@ -77,8 +77,7 @@ class ImageCompressor(nn.Module):
         # recon_image = prediction + recon_res
         clipped_recon_image = recon_image.clamp(0., 1.)
         # distortion
-        #mse_loss = torch.mean((recon_image - input_image).pow(2))
-        mse_loss = torch.mean((clipped_recon_image - input_image).pow(2))
+        mse_loss = torch.mean((recon_image - input_image).pow(2))
 
         def feature_probs_based_sigma_nips(feature, mu, sigma):
             sigma = sigma.pow(2)

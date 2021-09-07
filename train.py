@@ -19,10 +19,10 @@ wandb_recovery = ""
 
 train_data_dir = "../datasets/FLIR/train/"
 test_data_dir = "../datasets/FLIR/val/"
-train_rgb_dir = train_data_dir + "RGB/"
-train_ir_dir = train_data_dir + "IR/"
-test_rgb_dir = test_data_dir + "RGB/"
-test_ir_dir = test_data_dir + "IR/"
+train_rgb_dir = train_data_dir + "/RGB/"
+train_ir_dir = train_data_dir + "/IR/"
+test_rgb_dir = test_data_dir + "/RGB/"
+test_ir_dir = test_data_dir + "/IR/"
 
 # gpu_num = 4
 gpu_num = torch.cuda.device_count()
@@ -102,10 +102,10 @@ def parse_config(config):
         test_data_dir = config['test_dataset']
 
     global train_rgb_dir, train_ir_dir, test_rgb_dir, test_ir_dir
-    train_rgb_dir = train_data_dir + "RGB/"
-    train_ir_dir = train_data_dir + "IR/"
-    test_rgb_dir = test_data_dir + "RGB/"
-    test_ir_dir = test_data_dir + "IR/"
+    train_rgb_dir = train_data_dir + "/RGB/"
+    train_ir_dir = train_data_dir + "/IR/"
+    test_rgb_dir = test_data_dir + "/RGB/"
+    test_ir_dir = test_data_dir + "/IR/"
     
     global home, enable_wandb, wandb_project, wandb_recovery
     run_name = config['run_name'] if 'run_name' in config else 'unknown'
@@ -130,9 +130,9 @@ def parse_config(config):
                 wandb_recovery = config['wandb']['recovery']
                 print('recovery wandb to task: ', wandb_recovery)
             if wandb_recovery == "":
-                wandb.init(sync_tensorboard=True, project=wandb_project, name=run_name, dir=home+"/wandb")
+                wandb.init(sync_tensorboard=True, project=wandb_project, name=run_name, dir=home)
             else:
-                wandb.init(sync_tensorboard=True, project=wandb_project, name=run_name, dir=home+"/wandb", resume=wandb_recovery)
+                wandb.init(sync_tensorboard=True, project=wandb_project, name=run_name, dir=home, resume=wandb_recovery)
 
 
 def adjust_learning_rate(optimizer, global_step):
@@ -150,76 +150,68 @@ def adjust_learning_rate(optimizer, global_step):
         param_group['lr'] = lr
 
 
+def create_train_log(log, prefix, value):
+    if value is not None:
+        tb_logger.add_scalar(prefix, value.avg, global_step)
+        log += f' | {prefix} {value.val:.3f} ({value.avg:.3f})'
+    return log
+
+
 def train_logger(global_step, cur_lr, losses, elapsed, bpps, # both
     rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, # rgb
     ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features): # ir
 
-    tb_logger.add_scalar('lr', cur_lr, global_step)
-    tb_logger.add_scalar('rd_loss', losses.avg, global_step)
-    tb_logger.add_scalar('rgb_psnr', rgb_psnrs.avg, global_step)
-    tb_logger.add_scalar('ir_psnr', ir_psnrs.avg, global_step)
-    tb_logger.add_scalar('bpp', bpps.avg, global_step)
-    tb_logger.add_scalar('rgb_bpp', rgb_bpps.avg, global_step)
-    tb_logger.add_scalar('ir_bpp', ir_bpps.avg, global_step)
-    tb_logger.add_scalar('rgb_bpp_feature', rgb_bpp_features.avg, global_step)
-    tb_logger.add_scalar('ir_bpp_feature', ir_bpp_features.avg, global_step)
-    tb_logger.add_scalar('rgb_bpp_z', rgb_bpp_zs.avg, global_step)
-    tb_logger.add_scalar('ir_bpp_z', ir_bpp_zs.avg, global_step)
     process = global_step / tot_step * 100.0
-    log = (' | '.join([
-        f'Step [{global_step}/{tot_step}={process:.2f}%]',
-        f'Epoch {epoch}',
-        f'Time {elapsed.val:.3f} ({elapsed.avg:.3f})',
-        f'Lr {cur_lr}',
-        f'Total Loss {losses.val:.3f} ({losses.avg:.3f})',
-        f'PSNR(rgb) {rgb_psnrs.val:.3f} ({rgb_psnrs.avg:.3f})',
-        f'PSNR(ir) {ir_psnrs.val:.3f} ({ir_psnrs.avg:.3f})',
-        f'Bpp {bpps.val:.5f} ({bpps.avg:.5f})',
-        f'Bpp(rgb) {rgb_bpps.val:.5f} ({rgb_bpps.avg:.5f})',
-        f'Bpp(ir) {ir_bpps.val:.5f} ({ir_bpps.avg:.5f})',
-        f'Bpp_feature(rgb) {rgb_bpp_features.val:.5f} ({rgb_bpp_features.avg:.5f})',
-        f'Bpp_feature(ir) {ir_bpp_features.val:.5f} ({ir_bpp_features.avg:.5f})',
-        f'Bpp_z(rgb) {rgb_bpp_zs.val:.5f} ({rgb_bpp_zs.avg:.5f})',
-        f'Bpp_z(ir) {ir_bpp_zs.val:.5f} ({ir_bpp_zs.avg:.5f})',
-        f'MSE(rgb) {rgb_mse_losses.val:.5f} ({rgb_mse_losses.avg:.5f})',
-        f'MSE(ir) {ir_mse_losses.val:.5f} ({ir_mse_losses.avg:.5f})']))
+    log = f'Step [{global_step}/{tot_step}={process:.2f}%]'
+    log += f' | Epoch {epoch}'
+    if cur_lr is not None:
+        tb_logger.add_scalar('lr', cur_lr, global_step)
+        log += f' | Lr {cur_lr}'
+    log = create_train_log(log, 'rd_loss', losses)
+    log = create_train_log(log, 'psnr(rgb)', rgb_psnrs)
+    log = create_train_log(log, 'psnr(ir)', ir_psnrs)
+    log = create_train_log(log, 'bpp', bpps)
+    log = create_train_log(log, 'bpp(rgb)', rgb_bpps)
+    log = create_train_log(log, 'bpp(ir)', ir_bpps)
+    log = create_train_log(log, 'bpp_feature(rgb)', rgb_bpp_features)
+    log = create_train_log(log, 'bpp_feature(ir)', ir_bpp_features)
+    log = create_train_log(log, 'bpp_z(rgb)', rgb_bpp_zs)
+    log = create_train_log(log, 'bpp_z(ir)', ir_bpp_zs)
+    if rgb_mse_losses is not None:
+        log += f' | rgb_mse_loss {rgb_mse_losses.val:.5f} ({rgb_mse_losses.avg:.5f})'
+    if ir_mse_losses is not None:
+        log += f' | ir_mse_loss {ir_mse_losses.val:.5f} ({ir_mse_losses.avg:.5f})'
+
     logger.info(log)
 
+def create_test_log(log, step, prefix, value, cnt):
+    if value is not None:
+        value /= cnt
+        if tb_logger != None:
+            tb_logger.add_scalar(prefix, value, step)
+        log += f', {prefix}:{value:.6f}'
+    return log
 
 def test_logger(step, cnt, bpps, # both
     rgb_psnrs, rgb_msssims, rgb_msssimsDB, rgb_bpps, # rgb
     ir_psnrs, ir_msssims, ir_msssimsDB, ir_bpps): # ir
 
     logger.info("Test: model-{}".format(step))
-    bpps /= cnt
-    rgb_psnrs /= cnt
-    rgb_msssims /= cnt
-    rgb_msssimsDB /= cnt
-    rgb_bpps /= cnt
-    ir_psnrs /= cnt
-    ir_msssims /= cnt
-    ir_msssimsDB /= cnt
-    ir_bpps /= cnt
-    logger.info("Dataset Average result---Bpp:{:.6f}, Bpp(rgb):{:.6f}, Bpp(ir):{:.6f}, \
-            PSNR(rgb):{:.6f}, MS-SSIM(rgb):{:.6f}, MS-SSIM-DB(rgb):{:.6f}, \
-            PSNR(ir):{:.6f}, MS-SSIM(ir):{:.6f}, MS-SSIM-DB(ir):{:.6f}".format(\
-                bpps, rgb_bpps, ir_bpps, rgb_psnrs, rgb_msssims, rgb_msssimsDB, ir_psnrs, ir_msssims, ir_msssimsDB))
-    if tb_logger !=None:
-        logger.info("Add tensorboard---Step:{}".format(step))
-        tb_logger.add_scalar("BPP_Test", bpps, step)
-        tb_logger.add_scalar("BPP_Test(rgb)", rgb_bpps, step)
-        tb_logger.add_scalar("PSNR_Test(rgb)", rgb_psnrs, step)
-        tb_logger.add_scalar("MS-SSIM_Test(rgb)", rgb_msssims, step)
-        tb_logger.add_scalar("MS-SSIM_DB_Test(rgb)", rgb_msssimsDB, step)
-        tb_logger.add_scalar("BPP_Test(ir)", ir_bpps, step)
-        tb_logger.add_scalar("PSNR_Test(ir)", ir_psnrs, step)
-        tb_logger.add_scalar("MS-SSIM_Test(ir)", ir_msssims, step)
-        tb_logger.add_scalar("MS-SSIM_DB_Test(ir)", ir_msssimsDB, step)
-    else:
-        logger.info("No need to add tensorboard")
+    log = "Dataset Average result"
+    log = create_test_log(log, step, 'bpp-test', bpps, cnt)
+    log = create_test_log(log, step, 'bpp-test(rgb)', rgb_bpps, cnt)
+    log = create_test_log(log, step, 'psnr-test(rgb)', rgb_psnrs, cnt)
+    log = create_test_log(log, step, 'ms-ssim-test(rgb)', rgb_msssims, cnt)
+    log = create_test_log(log, step, 'ms-ssim-db-test(ir)', ir_msssimsDB, cnt)
+    log = create_test_log(log, step, 'bpp-test(ir)', ir_bpps, cnt)
+    log = create_test_log(log, step, 'psnr-test(ir)', ir_psnrs, cnt)
+    log = create_test_log(log, step, 'ms-ssim-test(ir)', ir_msssims, cnt)
+    log = create_test_log(log, step, 'ms-ssim-db-test(ir)', ir_msssimsDB, cnt)
+    
+    logger.info(log)
 
 
-def train(epoch, global_step, mode='both'):
+def train(epoch, global_step):
     logger.info("Epoch {} begin".format(epoch))
     net.train()
     global optimizer

@@ -14,8 +14,8 @@
     "save_model_freq": 50000,
     "cal_step": 400,
 
-    "train_dataset": "../datasets/Flick_patch",
-    "test_dataset": "../datasets/kodak",
+    "train_dataset": "../datasets/FLIR/train",
+    "test_dataset": "../datasets/FLIR/val",
 
     "run_name": "000_baseline",
     "wandb": {
