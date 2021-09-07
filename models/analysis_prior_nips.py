@@ -1,6 +1,5 @@
 #!/Library/Frameworks/Python.framework/Versions/3.5/bin/python3.5  
 # from .basics import *
-from .analysis import Analysis_net
 import math
 import torch.nn as nn
 import torch
@@ -28,20 +27,3 @@ class Analysis_prior_net_nips(nn.Module):
         x = self.relu1(self.conv1(x))
         x = self.relu2(self.conv2(x))
         return self.conv3(x)
-
-
-def build_model():
-    input_image = torch.zeros([5, 3, 256, 256])
-    analysis_net = Analysis_net()
-    analysis_prior_net = Analysis_prior_net_nips()
-
-    feature = analysis_net(input_image)
-    z = analysis_prior_net(feature)
-    
-    print(input_image.size())
-    print(feature.size())
-    print(z.size())
-
-
-if __name__ == '__main__':
-    build_model()

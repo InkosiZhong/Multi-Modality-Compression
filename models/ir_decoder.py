@@ -1,7 +1,5 @@
 #!/Library/Frameworks/Python.framework/Versions/3.5/bin/python3.5
-import math
 import torch.nn as nn
-import torch
 from .GDN import GDN
 
 class MultiDecoder(nn.Module):
