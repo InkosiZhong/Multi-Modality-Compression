@@ -172,7 +172,7 @@ def train(epoch, global_step):
             mse_losses.update(mse_loss.item())
 
         if (global_step % print_freq) == 0:
-            train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, None, \
+            train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, None, \
                 None, None, None, None, None, \
                 psnrs, mse_losses, bpps, bpp_zs, bpp_features)
 
@@ -208,7 +208,7 @@ def test(step):
                 bpp, psnr, msssim, msssimDB))
             cnt += 1
 
-        test_logger(step, cnt, None,
+        test_logger(tb_logger, step, cnt, None,
             None, None, None, None,
             sumPsnr, sumMsssim, sumMsssimDB, sumBpp)
 
@@ -223,7 +223,6 @@ if __name__ == "__main__":
     stdhandler.setLevel(logging.INFO)
     stdhandler.setFormatter(formatter)
     logger.addHandler(stdhandler)
-    tb_logger = None
     
     filehandler = logging.FileHandler(home + '/log.txt')
     filehandler.setLevel(logging.INFO)
@@ -256,8 +255,6 @@ if __name__ == "__main__":
     optimizer = optim.Adam(parameters, lr=base_lr)
 
     global train_ir_loader
-    tb_logger = SummaryWriter(home + '/events/')
-
     _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2)
 
     steps_epoch = global_step // n

@@ -8,5 +8,6 @@
     - event             # tensorboard文件
     - wandb           # wandb文件
     - snapshot       # 模型文件
+    - log.txt            # 日志文件
   - **002_xxxxx**
   - **003_xxxxx**

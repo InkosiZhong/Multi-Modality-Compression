@@ -196,7 +196,7 @@ def train(epoch, global_step):
             ir_mse_losses.update(ir_mse_loss.item())
 
         if (global_step % print_freq) == 0:
-            train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, \
+            train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, \
                 rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, \
                 ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features)
 
@@ -256,7 +256,7 @@ def test(step):
                     bpp, rgb_bpp, ir_bpp, rgb_psnr, rgb_msssim, rgb_msssimDB, ir_psnr, ir_msssim, ir_msssimDB))
             cnt += 1
         
-        test_logger(step, cnt, sumBpp,
+        test_logger(tb_logger, step, cnt, sumBpp,
             rgb_sumPsnr, rgb_sumMsssim, rgb_sumMsssimDB, rgb_sumBpp,
             ir_sumPsnr, ir_sumMsssim, ir_sumMsssimDB, ir_sumBpp)
 
@@ -271,7 +271,6 @@ if __name__ == "__main__":
     stdhandler.setLevel(logging.INFO)
     stdhandler.setFormatter(formatter)
     logger.addHandler(stdhandler)
-    tb_logger = None
     
     filehandler = logging.FileHandler(home + '/log.txt')
     filehandler.setLevel(logging.INFO)

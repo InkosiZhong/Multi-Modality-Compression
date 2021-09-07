@@ -7,10 +7,9 @@ import wandb
 
 gpu_num = torch.cuda.device_count()
 logger = logging.getLogger("MDMC")
-tb_logger = None
 
 
-def create_train_log(log, global_step, prefix, value, k=5):
+def create_train_log(tb_logger, log, global_step, prefix, value, k=5):
     if value is not None:
         tb_logger.add_scalar(prefix, value.avg, global_step)
         if k == 3:
@@ -20,7 +19,7 @@ def create_train_log(log, global_step, prefix, value, k=5):
     return log
 
 
-def train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, # both
+def train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, # both
     rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, # rgb
     ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features): # ir
 
@@ -49,7 +48,7 @@ def train_logger(global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, # 
 
     logger.info(log)
 
-def create_test_log(log, step, prefix, value, cnt):
+def create_test_log(tb_logger, log, step, prefix, value, cnt):
     if value is not None:
         value /= cnt
         if tb_logger != None:
@@ -57,7 +56,7 @@ def create_test_log(log, step, prefix, value, cnt):
         log += f', {prefix}:{value:.6f}'
     return log
 
-def test_logger(step, cnt, bpps, # both
+def test_logger(tb_logger, step, cnt, bpps, # both
     rgb_psnrs, rgb_msssims, rgb_msssimsDB, rgb_bpps, # rgb
     ir_psnrs, ir_msssims, ir_msssimsDB, ir_bpps): # ir
 
