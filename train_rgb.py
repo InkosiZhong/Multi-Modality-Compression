@@ -133,7 +133,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(parameters, lr=base_lr)
 
     global train_rgb_loader
-    tb_logger = SummaryWriter(home + '/events')
+    tb_logger = SummaryWriter(home + 'events/')
 
     train_rgb_loader, _, n = build_dataset(train_rgb_dir, None, batch_size, 2)
 

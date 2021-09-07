@@ -207,3 +207,24 @@ def test_logger(step, cnt, bpps, # both
     log = create_test_log(log, step, 'ms-ssim-db-test(ir)', ir_msssimsDB, cnt)
     
     logger.info(log)
+
+
+def save_model(model, iter, home):
+    print("save at " + home + "snapshot/iter{}.model")
+    torch.save(model.state_dict(), home+"snapshot/iter{}.model".format(iter))
+
+
+def load_model(model, f):
+    with open(f, 'rb') as f:
+        pretrained_dict = torch.load(f)
+        model_dict = model.state_dict()
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
+    f = str(f)
+    if f.find('iter_') != -1 and f.find('.pth') != -1:
+        st = f.find('iter_') + 5
+        ed = f.find('.pth', st)
+        return int(f[st:ed])
+    else:
+        return 0
