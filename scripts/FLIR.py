@@ -1,11 +1,8 @@
 import os.path
-import matplotlib.pyplot as plt
 import os
 import random
-import numpy as np
 import sys
 from PIL import Image
-from PIL import ImageFilter
 from tqdm import tqdm
 from functools import partial
 from multiprocessing import Pool
@@ -102,12 +99,14 @@ if __name__ == '__main__':
     size_k = 2
     patch_k = 4
 
-    p_process = partial(process_image, ori_dir=ori_dir, out_dir=out_dir, \
-        ir_patch_size=ir_patch_size, size_k=size_k, patch_k=patch_k)
-    with Pool() as p:
-        res = list(tqdm(p.imap(p_process, train_data), total=len(train_data)))
-
+    # val
     p_process = partial(process_image, ori_dir=ori_dir, out_dir=out_dir, \
         ir_patch_size=ir_patch_size, size_k=size_k, patch_k=patch_k, train=False)
     with Pool() as p:
-        res = list(tqdm(p.imap(p_process, val_data), total=len(val_data)))
+        res = list(tqdm(p.imap(p_process, val_data), total=len(val_data), desc='  val'))
+
+    # train
+    p_process = partial(process_image, ori_dir=ori_dir, out_dir=out_dir, \
+        ir_patch_size=ir_patch_size, size_k=size_k, patch_k=patch_k)
+    with Pool() as p:
+        res = list(tqdm(p.imap(p_process, train_data), total=len(train_data), desc='train'))

@@ -153,9 +153,7 @@ def train(epoch, global_step):
     logger.info("Epoch {} begin".format(epoch))
     net.train()
     global optimizer
-    elapsed, losses, rgb_psnrs, ir_psnrs, bpps, rgb_bpps, ir_bpps, \
-        rgb_bpp_features, ir_bpp_features, rgb_bpp_zs, ir_bpp_zs, \
-        rgb_mse_losses, ir_mse_losses = [AverageMeter(print_freq) for _ in range(13)]
+    elapsed, losses, psnrs, bpps, bpp_features, bpp_zs, mse_losses = [AverageMeter(print_freq) for _ in range(7)]
     # model_time = 0
     # compute_time = 0
     # log_time = 0
@@ -163,22 +161,17 @@ def train(epoch, global_step):
     # AMP
     #scaler = torch.cuda.amp.GradScaler()
 
-    for batch_idx, input in enumerate(zip(train_rgb_loader, train_ir_loader)):
+    for batch_idx, input in enumerate(train_loader):
         #with torch.cuda.amp.autocast():
         #torch.autograd.set_detect_anomaly(True) #debug
-        rgb_input, ir_input = input
-        rgb_input = rgb_input.cuda()
-        ir_input = ir_input.cuda()
+        input = input.cuda()
         start_time = time.time()
         global_step += 1
         # print("debug", torch.max(input), torch.min(input))
-        rgb_clipped_recon_image, ir_clipped_recon_image, rgb_mse_loss, ir_mse_loss, \
-                rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
+        clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
         # print("debug", clipped_recon_image.shape, " ", mse_loss.shape, " ", bpp.shape)
         # print("debug", mse_loss, " ", bpp_feature, " ", bpp_z, " ", bpp)
-        bpp = rgb_bpp + ir_bpp
         distribution_loss = bpp
-        mse_loss = rgb_mse_loss + ir_mse_loss
         distortion = mse_loss
         rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
@@ -199,26 +192,18 @@ def train(epoch, global_step):
         #scaler.update()
         if (global_step % cal_step) == 0:
             # t0 = time.time()
-            if rgb_mse_loss.item() > 0:
-                rgb_psnr = 10 * (torch.log(1 * 1 / rgb_mse_loss) / np.log(10))
-                rgb_psnrs.update(rgb_psnr.item())
-                ir_psnr = 10 * (torch.log(1 * 1 / ir_mse_loss) / np.log(10))
-                ir_psnrs.update(ir_psnr.item())
+            if mse_loss.item() > 0:
+                psnr = 10 * (torch.log(1 * 1 / mse_loss) / np.log(10))
+                psnrs.update(psnr.item())
             else:
-                rgb_psnrs.update(100)
-                ir_psnrs.update(100)
+                psnrs.update(100)
             # t1 = time.time()
             elapsed.update(time.time() - start_time)
             losses.update(rd_loss.item())
             bpps.update(bpp.item())
-            rgb_bpps.update(rgb_bpp.item())
-            ir_bpps.update(ir_bpp.item())
-            rgb_bpp_features.update(rgb_bpp_feature.item())
-            ir_bpp_features.update(ir_bpp_feature.item())
-            rgb_bpp_zs.update(rgb_bpp_z.item())
-            ir_bpp_zs.update(ir_bpp_z.item())
-            rgb_mse_losses.update(rgb_mse_loss.item())
-            ir_mse_losses.update(ir_mse_loss.item())
+            bpp_features.update(bpp_feature.item())
+            bpp_zs.update(bpp_z.item())
+            mse_losses.update(mse_loss.item())
             # t2 = time.time()
             # compute_time += (t2 - t0)
 
@@ -226,15 +211,10 @@ def train(epoch, global_step):
             # begin = time.time()
             tb_logger.add_scalar('lr', cur_lr, global_step)
             tb_logger.add_scalar('rd_loss', losses.avg, global_step)
-            tb_logger.add_scalar('rgb_psnr', rgb_psnrs.avg, global_step)
-            tb_logger.add_scalar('ir_psnr', ir_psnrs.avg, global_step)
-            tb_logger.add_scalar('bpp', bpps.avg, global_step)
-            tb_logger.add_scalar('rgb_bpp', rgb_bpps.avg, global_step)
-            tb_logger.add_scalar('ir_bpp', ir_bpps.avg, global_step)
-            tb_logger.add_scalar('rgb_bpp_feature', rgb_bpp_features.avg, global_step)
-            tb_logger.add_scalar('ir_bpp_feature', ir_bpp_features.avg, global_step)
-            tb_logger.add_scalar('rgb_bpp_z', rgb_bpp_zs.avg, global_step)
-            tb_logger.add_scalar('ir_bpp_z', ir_bpp_zs.avg, global_step)
+            tb_logger.add_scalar('ir_psnr', psnrs.avg, global_step)
+            tb_logger.add_scalar('ir_bpp', bpps.avg, global_step)
+            tb_logger.add_scalar('ir_bpp_feature', bpp_features.avg, global_step)
+            tb_logger.add_scalar('ir_bpp_z', bpp_zs.avg, global_step)
             process = global_step / tot_step * 100.0
             log = (' | '.join([
                 f'Step [{global_step}/{tot_step}={process:.2f}%]',
@@ -242,17 +222,11 @@ def train(epoch, global_step):
                 f'Time {elapsed.val:.3f} ({elapsed.avg:.3f})',
                 f'Lr {cur_lr}',
                 f'Total Loss {losses.val:.3f} ({losses.avg:.3f})',
-                f'PSNR(rgb) {rgb_psnrs.val:.3f} ({rgb_psnrs.avg:.3f})',
-                f'PSNR(ir) {ir_psnrs.val:.3f} ({ir_psnrs.avg:.3f})',
+                f'PSNR {psnrs.val:.3f} ({psnrs.avg:.3f})',
                 f'Bpp {bpps.val:.5f} ({bpps.avg:.5f})',
-                f'Bpp(rgb) {rgb_bpps.val:.5f} ({rgb_bpps.avg:.5f})',
-                f'Bpp(ir) {ir_bpps.val:.5f} ({ir_bpps.avg:.5f})',
-                f'Bpp_feature(rgb) {rgb_bpp_features.val:.5f} ({rgb_bpp_features.avg:.5f})',
-                f'Bpp_feature(ir) {ir_bpp_features.val:.5f} ({ir_bpp_features.avg:.5f})',
-                f'Bpp_z(rgb) {rgb_bpp_zs.val:.5f} ({rgb_bpp_zs.avg:.5f})',
-                f'Bpp_z(ir) {ir_bpp_zs.val:.5f} ({ir_bpp_zs.avg:.5f})',
-                f'MSE(rgb) {rgb_mse_losses.val:.5f} ({rgb_mse_losses.avg:.5f})',
-                f'MSE(ir) {ir_mse_losses.val:.5f} ({ir_mse_losses.avg:.5f})',
+                f'Bpp_feature {bpp_features.val:.5f} ({bpp_features.avg:.5f})',
+                f'Bpp_z {bpp_zs.val:.5f} ({bpp_zs.avg:.5f})',
+                f'MSE {mse_losses.val:.5f} ({mse_losses.avg:.5f})',
             ]))
             logger.info(log)
             # log_time = time.time() - begin
@@ -271,69 +245,37 @@ def test(step):
     with torch.no_grad():
         net.eval()
         sumBpp = 0
-        rgb_sumBpp = 0
-        ir_sumBpp = 0
-        rgb_sumPsnr = 0
-        ir_sumPsnr = 0
-        rgb_sumMsssim = 0
-        ir_sumMsssim = 0
-        rgb_sumMsssimDB = 0
-        ir_sumMsssimDB = 0
+        sumPsnr = 0
+        sumMsssim = 0
+        sumMsssimDB = 0
         cnt = 0
-        for batch_idx, input in enumerate(zip(test_rgb_loader, test_ir_loader)):
-            rgb_input, ir_input = input
-            rgb_input = rgb_input.cuda()
-            ir_input = ir_input.cuda()
-            rgb_clipped_recon_image, ir_clipped_recon_image, rgb_mse_loss, ir_mse_loss, \
-                rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
-            rgb_mse_loss, ir_mse_loss, rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp, bpp = \
-                torch.mean(rgb_mse_loss), torch.mean(ir_mse_loss), torch.mean(rgb_bpp_feature), torch.mean(ir_bpp_feature), \
-                    torch.mean(rgb_bpp_z), torch.mean(ir_bpp_z), torch.mean(rgb_bpp), torch.mean(ir_bpp), torch.mean(bpp)
+        for batch_idx, input in enumerate(test_loader):
+            input = input.cuda()
+            clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
+            mse_loss, bpp_feature, bpp_z, bpp = \
+                torch.mean(mse_loss), torch.mean(bpp_feature), torch.mean(bpp_z), torch.mean(bpp)
+            psnr = 10 * (torch.log(1. / mse_loss) / np.log(10))
             sumBpp += bpp
-            rgb_psnr = 10 * (torch.log(1. / rgb_mse_loss) / np.log(10))
-            rgb_sumBpp += rgb_bpp
-            rgb_sumPsnr += rgb_psnr
-            ir_psnr = 10 * (torch.log(1. / ir_mse_loss) / np.log(10))
-            ir_sumBpp += ir_bpp
-            ir_sumPsnr += ir_psnr
-
-            def cal_msssim(recon):
-                msssim = ms_ssim(recon.cpu().detach(), input.cpu(), data_range=1.0, size_average=True)
-                msssimDB = -10 * (torch.log(1-msssim) / np.log(10))
-                return msssim, msssimDB
-
-            rgb_msssim, rgb_msssimDB = cal_msssim(rgb_clipped_recon_image)
-            rgb_sumMsssimDB += rgb_msssimDB
-            rgb_sumMsssim += rgb_msssim
-            
-            ir_msssim, ir_msssimDB = cal_msssim(ir_clipped_recon_image)
-            ir_sumMsssimDB += ir_msssimDB
-            ir_sumMsssim += ir_msssim
-            logger.info("Bpp:{:.6f}, PSNR(rgb):{:.6f}, PSNR(ir):{:.6f}, \
-                MS-SSIM(rgb):{:.6f}, MS-SSIM(rgb):{:.6f}, MS-SSIM-DB(rgb):{:.6f}, MS-SSIM-DB(ir):{:.6f}".format(\
-                    bpp, rgb_psnr, ir_psnr, rgb_msssim, ir_msssim, rgb_msssimDB, ir_msssimDB))
+            sumPsnr += psnr
+            msssim = ms_ssim(clipped_recon_image.cpu().detach(), input.cpu(), data_range=1.0, size_average=True)
+            msssimDB = -10 * (torch.log(1-msssim) / np.log(10))
+            sumMsssimDB += msssimDB
+            sumMsssim += msssim
+            logger.info("Bpp:{:.6f}, PSNR:{:.6f}, MS-SSIM:{:.6f}, MS-SSIM-DB:{:.6f}".format(bpp, psnr, msssim, msssimDB))
             cnt += 1
 
         logger.info("Test on Kodak dataset: model-{}".format(step))
         sumBpp /= cnt
-        rgb_sumPsnr /= cnt
-        rgb_sumMsssim /= cnt
-        rgb_sumMsssimDB /= cnt
-        ir_sumPsnr /= cnt
-        ir_sumMsssim /= cnt
-        ir_sumMsssimDB /= cnt
-        logger.info("Dataset Average result---Bpp:{:.6f}, PSNR(rgb):{:.6f}, PSNR(ir):{:.6f}, \
-                MS-SSIM(rgb):{:.6f}, MS-SSIM(rgb):{:.6f}, MS-SSIM-DB(rgb):{:.6f}, MS-SSIM-DB(ir):{:.6f}".format(\
-                    bpp, rgb_psnr, ir_psnr, rgb_msssim, ir_msssim, rgb_msssimDB, ir_msssimDB))
+        sumPsnr /= cnt
+        sumMsssim /= cnt
+        sumMsssimDB /= cnt
+        logger.info("Dataset Average result---Bpp:{:.6f}, PSNR:{:.6f}, MS-SSIM:{:.6f}, MS-SSIM-DB:{:.6f}".format(sumBpp, sumPsnr, sumMsssim, sumMsssimDB))
         if tb_logger !=None:
             logger.info("Add tensorboard---Step:{}".format(step))
             tb_logger.add_scalar("BPP_Test", sumBpp, step)
-            tb_logger.add_scalar("PSNR_Test(rgb)", rgb_sumPsnr, step)
-            tb_logger.add_scalar("MS-SSIM_Test(rgb)", rgb_sumMsssim, step)
-            tb_logger.add_scalar("MS-SSIM_DB_Test(ir)", ir_sumMsssimDB, step)
-            tb_logger.add_scalar("PSNR_Test(ir)", ir_sumPsnr, step)
-            tb_logger.add_scalar("MS-SSIM_Test(ir)", ir_sumMsssim, step)
-            tb_logger.add_scalar("MS-SSIM_DB_Test(ir)", ir_sumMsssimDB, step)
+            tb_logger.add_scalar("PSNR_Test", sumPsnr, step)
+            tb_logger.add_scalar("MS-SSIM_Test", sumMsssim, step)
+            tb_logger.add_scalar("MS-SSIM_DB_Test", sumMsssimDB, step)
         else:
             logger.info("No need to add tensorboard")
 
@@ -361,7 +303,7 @@ if __name__ == "__main__":
     parse_config(args.config)
     logger.info("out_channel_N:{}, out_channel_M:{}".format(out_channel_N, out_channel_M))
     logger.info('Branch: Master')
-    model = MultiCompression(3, 1, out_channel_N, out_channel_M)
+    model = ImageCompressor(1, out_channel_N, out_channel_M)
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
@@ -369,18 +311,18 @@ if __name__ == "__main__":
     logger.info(net)
     net = torch.nn.DataParallel(net, list(range(gpu_num)))
     parameters = net.parameters()
-    global test_rgb_loader, test_ir_loader
-    test_rgb_loader, test_ir_loader, _ = build_dataset(test_rgb_dir, test_ir_dir, 1, 1)
+    global test_loader
+    _, test_loader, _ = build_dataset(test_rgb_dir, test_ir_dir, 1, 1)
     if args.test:
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)
     # save_model(model, 0)
-    global train_rgb_loader, train_ir_loader
+    global train_loader
     #tb_logger = SummaryWriter(os.path.join(home, 'events'))
     tb_logger = SummaryWriter(home + '/events')
 
-    train_rgb_loader, train_ir_loader, n = build_dataset(train_rgb_dir, train_ir_dir, batch_size, 2)
+    _, train_loader, n = build_dataset(train_rgb_dir, train_ir_dir, batch_size, 2)
 
     steps_epoch = global_step // n
     save_model(model, global_step, home)

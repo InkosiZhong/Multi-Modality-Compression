@@ -7,12 +7,12 @@ from torch.utils.data.dataset import Dataset
 # from data_loader.datasets import Dataset
 import torch
 import pdb
+from torch.utils.data import DataLoader
 
 
 class Datasets(Dataset):
-    def __init__(self, data_dir, image_size=256):
+    def __init__(self, data_dir):
         self.data_dir = data_dir
-        self.image_size = image_size
 
         if not os.path.exists(data_dir):
             raise Exception(f"[!] {self.data_dir} not exitd")
@@ -24,8 +24,8 @@ class Datasets(Dataset):
         image = Image.open(image_ori).convert('RGB')
         transform = transforms.Compose([
             # transforms.RandomResizedCrop(self.image_size),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
+            # transforms.RandomHorizontalFlip(),
+            # transforms.RandomVerticalFlip(),
             transforms.ToTensor(),
             # transforms.Normalize((5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
@@ -75,12 +75,27 @@ class TestKodakDataset(Dataset):
     def __len__(self):
         return len(self.image_path)
 
-def build_dataset():
+'''def build_dataset():
     train_set_dir = '/data1/liujiaheng/data/compression/Flick_patch/'
     dataset, dataloader = get_train_loader(train_set_dir, 256, 4)
     for batch_idx, (image, path) in enumerate(dataloader):
-        pdb.set_trace()
+        pdb.set_trace()'''
 
+
+def build_dataset(rgb_dir, ir_dir, batch_size, num_workder):
+    rgb_dataset = Datasets(rgb_dir)
+    rgb_loader = DataLoader(dataset=rgb_dataset,
+                                   batch_size=batch_size,
+                                   shuffle=False,
+                                   pin_memory=True,
+                                   num_worker=num_workder)
+    ir_dataset = Datasets(ir_dir)
+    ir_loader = DataLoader(dataset=ir_dataset,
+                                   batch_size=batch_size,
+                                   shuffle=False,
+                                   pin_memory=True,
+                                   num_worker=num_workder)
+    return rgb_loader, ir_loader, len(rgb_dataset) // batch_size
 
 if __name__ == '__main__':
     build_dataset()
