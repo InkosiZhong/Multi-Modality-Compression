@@ -47,7 +47,9 @@ parser.add_argument('--config', dest='config', required=False,
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')
 
 def parse_config(args):
+    print('parsing1')
     config = json.load(open(args.config))
+    print('parsing2')
     global tot_epoch, tot_step,  base_lr, cur_lr, lr_decay, decay_interval, train_lambda, batch_size, print_freq, \
         out_channel_M, out_channel_N, save_model_freq, cal_step
     if 'tot_epoch' in config:
@@ -86,7 +88,7 @@ def parse_config(args):
     global train_data_dir, test_data_dir
     if "train_dataset" in config:
         train_data_dir = config['train_dataset']
-    if "test_data_dir" in config:
+    if "test_dataset" in config:
         test_data_dir = config['test_dataset']
 
     global train_ir_dir, test_ir_dir

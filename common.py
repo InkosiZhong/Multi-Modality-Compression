@@ -76,8 +76,8 @@ def test_logger(tb_logger, step, cnt, bpps, # both
 
 
 def save_model(model, iter, home):
-    print("save at " + home + "/snapshot/iter{}.pth.tar".format(iter))
-    torch.save(model.state_dict(), home+"/snapshot/iter{}.pth.tar".format(iter))
+    print("save at " + home + "/snapshot/iter_{}.pth.tar".format(iter))
+    torch.save(model.state_dict(), home+"/snapshot/iter_{}.pth.tar".format(iter))
 
 
 def load_model(model, f):

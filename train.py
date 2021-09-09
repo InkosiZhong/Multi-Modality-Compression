@@ -94,7 +94,7 @@ def parse_config(args):
     global train_data_dir, test_data_dir
     if "train_dataset" in config:
         train_data_dir = config['train_dataset']
-    if "test_data_dir" in config:
+    if "test_dataset" in config:
         test_data_dir = config['test_dataset']
 
     global test_num
