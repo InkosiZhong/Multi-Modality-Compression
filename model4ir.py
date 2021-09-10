@@ -49,7 +49,7 @@ class MultiCompression(nn.Module):
         ir_recon_image = self.decoder(ir_compressed_feature_renorm)
 
         # ir
-        ir_entropy_params = ir_recon_sigma
+        #ir_entropy_params = ir_recon_sigma
         ir_mu = ir_entropy_params[:, 0: self.out_channel_M, :, :]
         ir_sigma = ir_entropy_params[:, self.out_channel_M: self.out_channel_M * 2, :, :]
         # recon_image = prediction + recon_res

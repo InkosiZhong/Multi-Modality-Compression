@@ -74,7 +74,7 @@ class MultiCompression(nn.Module):
         rgb_recon_image, ir_recon_image = self.decoder(rgb_compressed_feature_renorm, ir_compressed_feature_renorm)
 
         # rgb
-        rgb_entropy_params = rgb_recon_sigma
+        #rgb_entropy_params = rgb_recon_sigma
         rgb_mu = rgb_entropy_params[:, 0: self.out_channel_M, :, :]
         rgb_sigma = rgb_entropy_params[:, self.out_channel_M: self.out_channel_M * 2, :, :]
         # recon_image = prediction + recon_res
@@ -83,7 +83,7 @@ class MultiCompression(nn.Module):
         rgb_mse_loss = torch.mean((rgb_recon_image - input_rgb).pow(2))
 
         # ir
-        ir_entropy_params = ir_recon_sigma
+        #ir_entropy_params = ir_recon_sigma
         ir_mu = ir_entropy_params[:, 0: self.out_channel_M, :, :]
         ir_sigma = ir_entropy_params[:, self.out_channel_M: self.out_channel_M * 2, :, :]
         # recon_image = prediction + recon_res

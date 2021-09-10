@@ -49,7 +49,7 @@ class MultiCompression(nn.Module):
         rgb_recon_image = self.decoder(rgb_compressed_feature_renorm)
 
         # rgb
-        rgb_entropy_params = rgb_recon_sigma
+        #rgb_entropy_params = rgb_recon_sigma
         rgb_mu = rgb_entropy_params[:, 0: self.out_channel_M, :, :]
         rgb_sigma = rgb_entropy_params[:, self.out_channel_M: self.out_channel_M * 2, :, :]
         # recon_image = prediction + recon_res
