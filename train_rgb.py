@@ -146,6 +146,7 @@ def train(epoch, global_step):
     global optimizer
     elapsed, losses, psnrs, bpps, bpp_features, bpp_zs, mse_losses = [AverageMeter(print_freq) for _ in range(7)]
 
+    log_ready = False
     for _, input in enumerate(train_rgb_loader):
         input = input.cuda()
         start_time = time.time()
@@ -175,8 +176,9 @@ def train(epoch, global_step):
             bpp_features.update(bpp_feature.item())
             bpp_zs.update(bpp_z.item())
             mse_losses.update(mse_loss.item())
+            log_ready = True
 
-        if (global_step % print_freq) == 0:
+        if log_ready and (global_step % print_freq) == 0:
             train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, None, \
                 psnrs, mse_losses, bpps, bpp_zs, bpp_features, \
                 None, None, None, None, None)

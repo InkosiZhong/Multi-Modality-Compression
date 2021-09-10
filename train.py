@@ -158,6 +158,7 @@ def train(epoch, global_step):
         rgb_bpp_features, ir_bpp_features, rgb_bpp_zs, ir_bpp_zs, \
         rgb_mse_losses, ir_mse_losses = [AverageMeter(print_freq) for _ in range(13)]
 
+    log_ready = False
     for _, input in enumerate(zip(train_rgb_loader, train_ir_loader)):
         rgb_input, ir_input = input
         rgb_input = rgb_input.cuda()
@@ -200,8 +201,9 @@ def train(epoch, global_step):
             ir_bpp_zs.update(ir_bpp_z.item())
             rgb_mse_losses.update(rgb_mse_loss.item())
             ir_mse_losses.update(ir_mse_loss.item())
+            log_ready = True
 
-        if (global_step % print_freq) == 0:
+        if log_ready and (global_step % print_freq) == 0:
             train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, \
                 rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, \
                 ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features)

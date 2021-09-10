@@ -37,6 +37,8 @@ class AverageMeter:
 
     @property
     def avg(self) -> float:
+        if (self.count == 0):
+            return -1
         return self.sum / self.count
 
     def update(self, val: float):
