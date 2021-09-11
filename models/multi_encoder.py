@@ -27,11 +27,11 @@ class MultiEncoder(nn.Module):
         self.ir_conv4 = nn.Conv2d(out_channel_N, out_channel_M, 5, stride=2, padding=2)
 
         # ir -> rgb
-        self.align1 = TAlign(in_chans=out_channel_N, layers_cfg={2, 3, 2, 8, False})
+        self.align1 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv1 = nn.Conv2d(out_channel_N*2, out_channel_N, 5, 1, 2)
-        self.align2 = TAlign(in_chans=out_channel_N, layers_cfg={2, 3, 2, 8, False})
+        self.align2 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv2 = nn.Conv2d(out_channel_N*2, out_channel_N, 5, 1, 2)
-        self.align3 = TAlign(in_chans=out_channel_N, layers_cfg={2, 3, 2, 8, False})
+        self.align3 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv3 = nn.Conv2d(out_channel_N*2, out_channel_N, 5, 1, 2)
 
     def forward(self, rgb, ir):

@@ -29,11 +29,11 @@ class MultiDecoder(nn.Module):
         self.ir_deconv4 = nn.ConvTranspose2d(out_channel_N, out_channel2, 5, stride=1, padding=2, output_padding=0)
 
         # ir -> rgb
-        self.align1 = TAlign(in_chans=out_channel_N, layers_cfg={2, 3, 2, 8, False})
+        self.align1 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv1 = nn.Conv2d(out_channel_N*2, out_channel_N, 5, 1, 2)
-        self.align2 = TAlign(in_chans=out_channel_N, layers_cfg={2, 3, 2, 8, False})
+        self.align2 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv2 = nn.Conv2d(out_channel_N*2, out_channel_N, 5, 1, 2)
-        self.align2 = TAlign(in_chans=out_channel_N, layers_cfg={2, 3, 2, 8, False})
+        self.align2 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv3 = nn.Conv2d(out_channel_N*2, out_channel_N, 5, 1, 2)
 
     def forward(self, rgb, ir):
