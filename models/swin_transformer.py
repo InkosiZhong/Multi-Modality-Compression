@@ -6,8 +6,6 @@ import numpy as np
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from torchvision import utils as vutils
 
-from subnet.attncoder import AttnEncodeNet, AttnDecodeNet
-
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
         super().__init__()
@@ -114,9 +112,6 @@ class WindowAttention(nn.Module):
         trunc_normal_(self.relative_position_bias_table, std=.02)
         self.softmax = nn.Softmax(dim=-1)
 
-        self.attn_encoder = AttnEncodeNet(self.num_heads*self.window_size*self.window_size)
-        self.attn_decoder = AttnDecodeNet(self.num_heads*self.window_size*self.window_size)
-
     def Q(self, x):
         if self.training:
             return x + torch.nn.init.uniform_(torch.zeros_like(x), -0.5, 0.5)
@@ -157,27 +152,11 @@ class WindowAttention(nn.Module):
         attn = self.softmax(attn)
         attn = self.attn_drop(attn) # [b_, num_heads, N, N]
 
-        # compression [b, num_heads*N, nW_h*window_size, nW_w*window_size]
-        attn = attn.view(B, H // self.window_size, W // self.window_size, \
-            self.num_heads * N, self.window_size, self.window_size)
-        attn = attn.permute(0, 3, 1, 4, 2, 5)
-        attn = attn.reshape(B, -1, H, W)
-        en_attn = self.attn_encoder(attn)
-        q_attn = self.Q(en_attn)
-        attn = self.attn_decoder(q_attn)
-        attn = attn.view(B, self.num_heads, N, H // self.window_size, self.window_size, \
-            W // self.window_size, self.window_size)
-        attn = attn.permute(0, 3, 5, 1, 2, 4, 6)
-        attn = attn.reshape(B_, self.num_heads, N, N)
-
-        attn = self.softmax(attn)
-        attn = self.attn_drop(attn) # [b_, num_heads, N, N]
-
         x = (attn @ v).transpose(1, 2).reshape(B_, N, C)
         x = self.proj(x)
         x = self.proj_drop(x)
 
-        return x, en_attn, q_attn
+        return x
 
 
 class SwinTransformerBlock(nn.Module):
@@ -262,7 +241,7 @@ class SwinTransformerBlock(nn.Module):
         adj_windows = adj_windows.view(-1, self.window_size * self.window_size, C)  # nW*B, window_size*window_size, C
 
         # W-MSA/SW-MSA
-        x_windows, en_attn, q_attn = self.attn(ref_windows, adj_windows, x_shape=(B,H,W), mask=attn_mask)  # nW*B, window_size*window_size, C
+        x_windows = self.attn(ref_windows, adj_windows, x_shape=(B,H,W), mask=attn_mask)  # nW*B, window_size*window_size, C
 
         # merge windows
         shifted_x = x_windows.view(-1, self.window_size, self.window_size, C)
@@ -283,7 +262,7 @@ class SwinTransformerBlock(nn.Module):
         x = shortcut + self.drop_path(x)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         #x = self.drop_path(self.mlp(self.norm2(x)))
-        return x, en_attn, q_attn
+        return x
 
 
 class MaskLayer(nn.Module):
@@ -503,11 +482,9 @@ class SwinTransformerAlignment(nn.Module):
 
         for j in range(self.depth):
             if self.use_checkpoint:
-                ref_embed, _, _ = checkpoint.checkpoint(
-                    self.blocks[j], x_embed, ref_embed, mask, (Hp, Wp))
+                ref_embed = checkpoint.checkpoint(self.blocks[j], x_embed, ref_embed, mask, (Hp, Wp))
             else:
-                ref_embed, _, _ =\
-                    self.blocks[j](x_embed, ref_embed, mask, (Hp, Wp))
+                ref_embed = self.blocks[j](x_embed, ref_embed, mask, (Hp, Wp))
 
         aligned_ref = self.patch_rec(ref_embed, h, w)
 
