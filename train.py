@@ -53,6 +53,7 @@ parser.add_argument('--test', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')
+parser.add_argument('-f', '--freeze', default=0, type=int, help='freeze steps for ir and rgb pretrain parameters')
 
 def parse_config(args):
     config = json.load(open(args.config))
@@ -100,6 +101,7 @@ def parse_config(args):
     global test_num
     if "test_num" in config:
         test_num = config['test_num']
+
 
     global train_rgb_dir, train_ir_dir, test_rgb_dir, test_ir_dir
     train_rgb_dir = train_data_dir + "/RGB/"
@@ -160,6 +162,13 @@ def train(epoch, global_step):
 
     log_ready = False
     for _, input in enumerate(zip(train_rgb_loader, train_ir_loader)):
+        if args.freeze and global_step == args.freeze: # finish freezing
+            logger.info(f"Unfreeze paramaters at step {global_step}")
+            for name, param in net.named_parameters():
+                if 'ir' not in name and "align" not in name and "fusion" not in name:
+                    param.requires_grad = True
+        optimizer = optim.Adam(net.parameters(), lr=cur_lr)
+
         rgb_input, ir_input = input
         rgb_input = rgb_input.cuda()
         ir_input = ir_input.cuda()
@@ -167,9 +176,9 @@ def train(epoch, global_step):
         global_step += 1
         _, _, rgb_mse_loss, ir_mse_loss, \
                 rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
-        bpp = rgb_bpp + ir_bpp
+        bpp = rgb_bpp# + ir_bpp
         distribution_loss = bpp
-        mse_loss = rgb_mse_loss + ir_mse_loss
+        mse_loss = rgb_mse_loss# + ir_mse_loss
         distortion = mse_loss
         rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
@@ -305,6 +314,16 @@ if __name__ == "__main__":
         global_step = load_model(model, args.pretrain)
 
     net = model.cuda()
+    for name, param in net.named_parameters():
+        if 'ir' in name:
+            param.requires_grad = False
+    # freeze
+    if args.freeze != 0:
+        logger.info(f"Freeze parameters for {args.freeze} steps")
+        for name, param in net.named_parameters():
+            if "align" not in name and "fusion" not in name:
+                param.requires_grad = False
+    
     logger.info(net)
     net = torch.nn.DataParallel(net, list(range(gpu_num)))
     parameters = net.parameters()
@@ -315,7 +334,7 @@ if __name__ == "__main__":
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)
 
-    tb_logger = SummaryWriter(home + 'events/')
+    tb_logger = SummaryWriter(home + '/events/')
 
     train_rgb_loader, train_ir_loader, n = build_dataset(train_rgb_dir, train_ir_dir, batch_size, 2)
 

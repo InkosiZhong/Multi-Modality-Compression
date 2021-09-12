@@ -48,6 +48,7 @@ def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
                                 shuffle=False,
                                 pin_memory=True,
                                 num_workers=num_workders)
+        print("rgb dataset: ", len(rgb_dataset))
         n = len(rgb_dataset) // batch_size
     else:
         rgb_loader = None
@@ -59,6 +60,7 @@ def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
                                 shuffle=False,
                                 pin_memory=True,
                                 num_workers=num_workders)
+        print("ir dataset: ", len(ir_dataset))
         n = len(ir_dataset) // batch_size
     else:
         ir_loader = None
