@@ -41,6 +41,7 @@ parser = argparse.ArgumentParser(description='Pytorch reimplement for variationa
 
 parser.add_argument('-p', '--pretrain', default = '',
         help='load pretrain model')
+parser.add_argument('--finetune', action='store_true')
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
@@ -244,6 +245,8 @@ if __name__ == "__main__":
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
+        if args.finetune:
+            global_step = 0
 
     net = model.cuda()
     logger.info(net)
