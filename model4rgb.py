@@ -71,6 +71,7 @@ class MultiCompression(nn.Module):
             return rgb_total_bits, rgb_prob
 
         rgb_total_bits_z, _ = iclr18_estimate_bits_z(rgb_compressed_z)
+        
         # rgb
         rgb_total_bits_feature, _ = feature_probs_based_sigma_nips(rgb_compressed_feature_renorm, rgb_mu, rgb_sigma)
         rgb_shape = input_rgb.size()

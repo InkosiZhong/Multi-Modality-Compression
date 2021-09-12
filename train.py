@@ -39,7 +39,6 @@ global_step = 0
 save_model_freq = 50000
 out_channel_N = 192
 out_channel_M = 320
-test_num = -1
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
@@ -97,11 +96,6 @@ def parse_config(args):
         train_data_dir = config['train_dataset']
     if "test_dataset" in config:
         test_data_dir = config['test_dataset']
-
-    global test_num
-    if "test_num" in config:
-        test_num = config['test_num']
-
 
     global train_rgb_dir, train_ir_dir, test_rgb_dir, test_ir_dir
     train_rgb_dir = train_data_dir + "/RGB/"
@@ -167,7 +161,7 @@ def train(epoch, global_step):
             for name, param in net.named_parameters():
                 if 'ir' not in name and "align" not in name and "fusion" not in name:
                     param.requires_grad = True
-        optimizer = optim.Adam(net.parameters(), lr=cur_lr)
+            optimizer = optim.Adam(net.parameters(), lr=cur_lr)
 
         rgb_input, ir_input = input
         rgb_input = rgb_input.cuda()

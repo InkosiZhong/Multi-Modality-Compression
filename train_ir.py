@@ -47,9 +47,7 @@ parser.add_argument('--config', dest='config', required=False,
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')
 
 def parse_config(args):
-    print('parsing1')
     config = json.load(open(args.config))
-    print('parsing2')
     global tot_epoch, tot_step,  base_lr, cur_lr, lr_decay, decay_interval, train_lambda, batch_size, print_freq, \
         out_channel_M, out_channel_N, save_model_freq, cal_step
     if 'tot_epoch' in config:
@@ -197,7 +195,7 @@ def test(step):
         sumMsssim = 0
         sumMsssimDB = 0
         cnt = 0
-        for batch_idx, input in enumerate(test_ir_loader):
+        for _, input in enumerate(test_ir_loader):
             input = input.cuda()
             clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
             mse_loss, bpp_feature, bpp_z, bpp = \

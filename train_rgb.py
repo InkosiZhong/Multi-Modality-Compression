@@ -89,10 +89,6 @@ def parse_config(args):
     if "test_dataset" in config:
         test_data_dir = config['test_dataset']
 
-    global test_num
-    if "test_num" in config:
-        test_num = config['test_num']
-
     global train_rgb_dir, test_rgb_dir
     train_rgb_dir = train_data_dir + "/RGB/"
     test_rgb_dir = test_data_dir + "/RGB/"
@@ -230,7 +226,6 @@ if __name__ == "__main__":
     stdhandler.setLevel(logging.INFO)
     stdhandler.setFormatter(formatter)
     logger.addHandler(stdhandler)
-    tb_logger = None
     
     filehandler = logging.FileHandler(home + '/log.txt')
     filehandler.setLevel(logging.INFO)
@@ -245,9 +240,11 @@ if __name__ == "__main__":
     logger.info('Branch: Master')
 
     model = MultiCompression(in_channel1=3, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+    
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
+
     net = model.cuda()
     logger.info(net)
     net = torch.nn.DataParallel(net, list(range(gpu_num)))
