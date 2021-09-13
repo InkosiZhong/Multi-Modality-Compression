@@ -263,7 +263,7 @@ if __name__ == "__main__":
     global train_ir_loader
     tb_logger = SummaryWriter(home + '/events/')
     
-    _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2)
+    _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2, train_data_dir+'/FLIR.txt')
 
     steps_epoch = global_step // n
     save_model(model, global_step, home)

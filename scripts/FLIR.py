@@ -6,6 +6,7 @@ from PIL import Image
 from tqdm import tqdm
 from functools import partial
 from multiprocessing import Pool
+from shuffle_dataset import shuffle
 
 def parse_dir(ori, out):
     if not os.path.exists(out):
@@ -87,6 +88,7 @@ def process_image(name, ori_dir, out_dir, ir_patch_size, size_k, patch_k, train=
         rgb_patch_path = out_dir[key]['rgb'] + name + "_%04d.png" % (sample_id)
         rgb_crop_patch.save(rgb_patch_path)
 
+
 if __name__ == '__main__': 
     ori_data_dir = sys.argv[1]
     output_path = sys.argv[2]
@@ -110,3 +112,5 @@ if __name__ == '__main__':
         ir_patch_size=ir_patch_size, size_k=size_k, patch_k=patch_k)
     with Pool() as p:
         res = list(tqdm(p.imap(p_process, train_data), total=len(train_data), desc='train'))
+
+    shuffle(out_dir + '/train/', out_dir + '/train/FLIR.txt')

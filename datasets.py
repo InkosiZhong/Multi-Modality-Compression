@@ -11,14 +11,19 @@ from torch.utils.data import DataLoader
 
 
 class Datasets(Dataset):
-    def __init__(self, data_dir, channels=3):
-        self.data_dir = data_dir
+    def __init__(self, data_dir, data_list=None, channels=3):
         self.channels = channels
 
         if not os.path.exists(data_dir):
-            raise Exception(f"[!] {self.data_dir} not exitd")
+            raise Exception(f"[!] {data_dir} not exitd")
 
-        self.image_path = sorted(glob(os.path.join(self.data_dir, "*.*")))
+        if data_list is None:
+            self.image_path = sorted(glob(os.path.join(data_dir, "*.*")))
+        else:
+            if not os.path.exists(data_list):
+                raise Exception(f"[!] {data_list} not exitd")
+            with open(data_list) as f:
+                self.image_path = [data_dir + '/' + l.strip('\n') for l in f.readlines()]
 
     def __getitem__(self, item):
         image_ori = self.image_path[item]
@@ -39,10 +44,10 @@ class Datasets(Dataset):
         return len(self.image_path)
 
 
-def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
+def build_dataset(rgb_dir, ir_dir, batch_size, num_workders, data_list = None):
     n = 0
     if rgb_dir is not None:
-        rgb_dataset = Datasets(rgb_dir)
+        rgb_dataset = Datasets(rgb_dir, data_list=data_list, channels=3)
         rgb_loader = DataLoader(dataset=rgb_dataset,
                                 batch_size=batch_size,
                                 shuffle=False,
@@ -54,7 +59,7 @@ def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
         rgb_loader = None
     
     if ir_dir is not None:
-        ir_dataset = Datasets(ir_dir, channels=1)
+        ir_dataset = Datasets(ir_dir, data_list=data_list, channels=1)
         ir_loader = DataLoader(dataset=ir_dataset,
                                 batch_size=batch_size,
                                 shuffle=False,
@@ -66,6 +71,3 @@ def build_dataset(rgb_dir, ir_dir, batch_size, num_workders):
         ir_loader = None
 
     return rgb_loader, ir_loader, n
-
-if __name__ == '__main__':
-    build_dataset()
