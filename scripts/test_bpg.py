@@ -75,5 +75,5 @@ if __name__ == '__main__':
 		print(f'mean(qp={q}) 	bpp: {np.mean(bpps):.5f} 	psnr: {np.mean(psnrs):.3f}')
 	
 	plt.plot(all_bpps, all_psnrs)
-	plt.savefig(f'bpg_test_{input_dir}.png', dpi=120)
+	plt.savefig(f'bpg_test.png', dpi=120)
 	plt.show()
