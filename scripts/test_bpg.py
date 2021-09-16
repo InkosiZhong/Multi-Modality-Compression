@@ -53,7 +53,7 @@ if __name__ == '__main__':
 		decode_dir = sys.argv[3] + '/decoder'
 	if len(sys.argv) > 4:
 		the_bpp, the_psnr = sys.argv[4].split(',')
-		plt.plot(float(the_bpp), float(the_psnr))
+		plt.plot(float(the_bpp), float(the_psnr), 's')
 	
 	if not os.path.exists(encode_dir):
 		os.mkdir(encode_dir)
