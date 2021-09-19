@@ -5,9 +5,10 @@ import math
 from PIL import Image
 import matplotlib.pyplot as plt
 
-input_dir = "./kodak/input"
-encode_dir = "./kodak/encode"
-decode_dir = "./kodak/decode"
+input_dir = "./input"
+encode_dir = "./encode"
+decode_dir = "./decode"
+log_dir = "./result.txt"
 
 def psnr(img1, img2):
 	mse = np.mean((img1/1. - img2/1.) ** 2)
@@ -51,6 +52,8 @@ if __name__ == '__main__':
 		encode_dir = input_dir + '/encoder'
 	if len(sys.argv) > 3:
 		decode_dir = sys.argv[3] + '/decoder'
+	else:
+		decode_dir = input_dir + '/decoder'
 	if len(sys.argv) > 4:
 		the_bpp, the_psnr = sys.argv[4].split(',')
 		plt.plot(float(the_bpp), float(the_psnr), 's')
@@ -73,6 +76,8 @@ if __name__ == '__main__':
 		all_bpps.append(np.mean(bpps))
 		all_psnrs.append(np.mean(psnrs))
 		print(f'mean(qp={q}) 	bpp: {np.mean(bpps):.5f} 	psnr: {np.mean(psnrs):.3f}')
+		with open(log_dir, 'a') as log:
+			log.write(f'{np.mean(bpps):.5f},{np.mean(psnrs):.3f}\n')
 	
 	plt.plot(all_bpps, all_psnrs)
 	plt.savefig(f'bpg_test.png', dpi=120)
