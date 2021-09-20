@@ -7,10 +7,10 @@ from models.multi_decoder import *
 
 
 class MultiCompression(nn.Module):
-    def __init__(self, in_channel1=3, in_channel2=1, out_channel_N=192, out_channel_M=192):
+    def __init__(self, in_channel1=3, in_channel2=1, out_channel_N=192, out_channel_M=192, mode='train_rgb'):
         super().__init__()
-        self.encoder = MultiEncoder(in_channel1=in_channel1, in_channel2=in_channel2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
-        self.decoder = MultiDecoder(out_channel1=in_channel1, out_channel2=in_channel2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.encoder = MultiEncoder(in_channel1, in_channel2, out_channel_N, out_channel_M, mode)
+        self.decoder = MultiDecoder(in_channel1, in_channel2, out_channel_N, out_channel_M, mode)
         # rgb
         self.rgbPriorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.rgbPriorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)
@@ -26,6 +26,7 @@ class MultiCompression(nn.Module):
 
         self.out_channel_N = out_channel_N
         self.out_channel_M = out_channel_M
+        self.mode = mode
 
     def forward(self, input_rgb, input_ir):
         # encoder

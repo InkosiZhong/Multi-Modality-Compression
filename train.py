@@ -42,12 +42,14 @@ out_channel_M = 320
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
+parser.add_argument('--finetune', action='store_true')
 parser.add_argument('-p', '--pretrain', default = '',
         help='load pretrain model')
 parser.add_argument('-r', '--pretrain_rgb', default = '',
         help='load rgb pretrain model')
 parser.add_argument('-i', '--pretrain_ir', default = '',
         help='load ir pretrain model')
+parser.add_argument('-m', '--mode', help='MDMC mode: train_ir, train_rgb')
 parser.add_argument('--test', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
@@ -159,7 +161,8 @@ def train(epoch, global_step):
         if args.freeze and global_step == args.freeze: # finish freezing
             logger.info(f"Unfreeze paramaters at step {global_step}")
             for name, param in net.named_parameters():
-                if 'ir' not in name and "align" not in name and "fusion" not in name:
+                if (args.mode == 'train_ir' and 'rgb' not in name) or \
+                   (args.mode == 'train_rgb' and 'ir' not in name):
                     param.requires_grad = True
             optimizer = optim.Adam(net.parameters(), lr=cur_lr)
 
@@ -295,7 +298,15 @@ if __name__ == "__main__":
     logger.info("out_channel_N:{}, out_channel_M:{}".format(out_channel_N, out_channel_M))
     logger.info('Branch: Master')
 
-    model = MultiCompression(in_channel1=3, in_channel2=1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+    if args.mode not in ['train_rgb', 'train_ir']:
+        logger.info(f'unknown mode \'{args.mode}\', use \'train_rgb\' or \'train_ir\'')
+        exit(-1)
+    
+    model = MultiCompression(in_channel1=3, 
+                             in_channel2=1, 
+                             out_channel_N=out_channel_N, 
+                             out_channel_M=out_channel_M,
+                             mode=args.mode)
 
     if args.pretrain_rgb != '':
         logger.info("loading model:{}".format(args.pretrain_rgb))
@@ -306,10 +317,13 @@ if __name__ == "__main__":
     if args.pretrain != '':
         logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
+        if args.finetune:
+            global_step = 0
 
     net = model.cuda()
     for name, param in net.named_parameters():
-        if 'ir' in name:
+        if (args.mode == 'train_ir' and 'rgb' in name) or \
+           (args.mode == 'train_rgb' and 'ir' in name):
             param.requires_grad = False
     # freeze
     if args.freeze != 0:
