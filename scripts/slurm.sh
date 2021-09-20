@@ -64,7 +64,7 @@ echo "Use GPU ${CUDA_VISIBLE_DEVICES}"                              # which gpus
 #- The CUDA_VISIBLE_DEVICES variable is assigned and specified by SLURM
 
 #- Job step
-python train.py --config config.json
+python train.py --config config.json -m 'train_rgb' -i xxx -r xxx
 
 #- End
 echo "Job end at $(date "+%Y-%m-%d %H:%M:%S")"
