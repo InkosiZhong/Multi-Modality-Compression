@@ -173,9 +173,9 @@ def train(epoch, global_step):
         global_step += 1
         _, _, rgb_mse_loss, ir_mse_loss, \
                 rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
-        bpp = rgb_bpp# + ir_bpp
+        bpp = rgb_bpp if args.mode == 'train_rgb' else ir_bpp
         distribution_loss = bpp
-        mse_loss = rgb_mse_loss# + ir_mse_loss
+        mse_loss = rgb_mse_loss if args.mode == 'train_rgb' else ir_mse_loss
         distortion = mse_loss
         rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
