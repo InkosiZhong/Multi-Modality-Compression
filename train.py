@@ -175,13 +175,16 @@ def train(epoch, global_step):
         global_step += 1
         _, _, rgb_mse_loss, ir_mse_loss, \
                 rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
+        rgb_mse_loss, ir_mse_loss = rgb_mse_loss.mean(), ir_mse_loss.mean()
+        rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = \
+            rgb_bpp_feature.sum(), ir_bpp_feature.sum(), rgb_bpp_z.sum(), ir_bpp_z.sum(), rgb_bpp.sum(), ir_bpp.sum()
         bpp = rgb_bpp if args.mode == 'train_rgb' else ir_bpp
         distribution_loss = bpp
         mse_loss = rgb_mse_loss if args.mode == 'train_rgb' else ir_mse_loss
         distortion = mse_loss
         rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
-        rd_loss.sum().backward()
+        rd_loss.backward()
         def clip_gradient(optimizer, grad_clip):
             for group in optimizer.param_groups:
                 for param in group["params"]:
