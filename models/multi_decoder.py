@@ -43,26 +43,27 @@ class MultiDecoder(nn.Module):
     def forward(self, rgb, ir):
         rgb = self.rgb_igdn1(self.rgb_deconv1(rgb))
         ir = self.ir_igdn1(self.ir_deconv1(ir))
+        
         if self.mode == 'train_rgb':
-            rgb = self.fusion_conv1(torch.cat([rgb, self.align1(ir, rgb)], dim=1))
+            rgb = self.fusion_conv1(torch.cat([rgb, self.align1(self.proj_conv1(ir), rgb)], dim=1))
         else:
-            ir = self.fusion_conv1(torch.cat([ir, self.align1(rgb, ir)], dim=1))
+            ir = self.fusion_conv1(torch.cat([ir, self.align1(self.proj_conv1(rgb), ir)], dim=1))
 
         rgb = self.rgb_igdn2(self.rgb_deconv2(rgb))
         ir = self.ir_igdn2(self.ir_deconv2(ir))
         
         if self.mode == 'train_rgb':
-            rgb = self.fusion_conv2(torch.cat([rgb, self.align2(ir, rgb)], dim=1))
+            rgb = self.fusion_conv2(torch.cat([rgb, self.align2(self.proj_conv2(ir), rgb)], dim=1))
         else:
-            ir = self.fusion_conv2(torch.cat([ir, self.align2(rgb, ir)], dim=1))
+            ir = self.fusion_conv2(torch.cat([ir, self.align2(self.proj_conv2(rgb), ir)], dim=1))
 
         rgb = self.rgb_igdn3(self.rgb_deconv3(rgb))
         ir = self.ir_igdn3(self.ir_deconv3(ir))
         
         if self.mode == 'train_rgb':
-            rgb = self.fusion_conv3(torch.cat([rgb, self.align3(ir, rgb)], dim=1))
+            rgb = self.fusion_conv3(torch.cat([rgb, self.align3(self.proj_conv3(ir), rgb)], dim=1))
         else:
-            ir = self.fusion_conv3(torch.cat([ir, self.align3(rgb, ir)], dim=1))
+            ir = self.fusion_conv3(torch.cat([ir, self.align3(self.proj_conv3(rgb), ir)], dim=1))
 
         rgb = self.rgb_deconv4(rgb)
         ir = self.ir_deconv4(ir) 

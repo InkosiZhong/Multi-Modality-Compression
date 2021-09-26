@@ -7,6 +7,7 @@ from Meter import AverageMeter
 import numpy as np
 from model import *
 from common import *
+import shutil
 
 torch.backends.cudnn.enabled = True
 
@@ -113,6 +114,7 @@ def parse_config(args):
             os.mkdir(home)
         else:
             print("home dir is already exists.")
+        shutil.copyfile(args.config, os.path.join(home, 'config.json'))
         if not os.path.exists(home + "/snapshot"):
             os.mkdir(home + "/snapshot") # to save model
         else:
@@ -179,7 +181,7 @@ def train(epoch, global_step):
         distortion = mse_loss
         rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
-        rd_loss.backward()
+        rd_loss.sum().backward()
         def clip_gradient(optimizer, grad_clip):
             for group in optimizer.param_groups:
                 for param in group["params"]:

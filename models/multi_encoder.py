@@ -41,27 +41,27 @@ class MultiEncoder(nn.Module):
     def forward(self, rgb, ir):
         rgb = self.rgb_gdn1(self.rgb_conv1(rgb))
         ir = self.ir_gdn1(self.ir_conv1(ir))
-        #ir = self.align1(ir, rgb) # ir -> rgb
-        if self.mode == 'train_rgb':
+
+        '''if self.mode == 'train_rgb':
             rgb = self.fusion_conv1(torch.cat([rgb, self.proj_conv1(ir)], dim=1))
         else:
-            ir = self.fusion_conv1(torch.cat([ir, self.proj_conv1(rgb)], dim=1))
+            ir = self.fusion_conv1(torch.cat([ir, self.proj_conv1(rgb)], dim=1))'''
 
         rgb = self.rgb_gdn2(self.rgb_conv2(rgb))
         ir = self.ir_gdn2(self.ir_conv2(ir))
-        #ir = self.align2(ir, rgb)
-        if self.mode == 'train_rgb':
+
+        '''if self.mode == 'train_rgb':
             rgb = self.fusion_conv2(torch.cat([rgb, self.proj_conv2(ir)], dim=1))
         else:
-            ir = self.fusion_conv2(torch.cat([ir, self.proj_conv2(rgb)], dim=1))
+            ir = self.fusion_conv2(torch.cat([ir, self.proj_conv2(rgb)], dim=1))'''
 
         rgb = self.rgb_gdn3(self.rgb_conv3(rgb))
         ir = self.ir_gdn3(self.ir_conv3(ir))
-        #ir = self.align3(ir, rgb)
-        if self.mode == 'train_rgb':
+        
+        '''if self.mode == 'train_rgb':
             rgb = self.fusion_conv3(torch.cat([rgb, self.proj_conv3(ir)], dim=1))
         else:
-            ir = self.fusion_conv3(torch.cat([ir, self.proj_conv3(rgb)], dim=1))
+            ir = self.fusion_conv3(torch.cat([ir, self.proj_conv3(rgb)], dim=1))'''
 
         rgb = self.rgb_conv4(rgb)
         ir = self.ir_conv4(ir)
