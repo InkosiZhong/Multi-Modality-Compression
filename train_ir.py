@@ -254,7 +254,7 @@ if __name__ == "__main__":
     parameters = net.parameters()
 
     global test_ir_loader
-    _, test_ir_loader, _ = build_dataset(None, test_ir_dir, 1, 1)
+    _, test_ir_loader, _ = build_dataset(None, test_ir_dir, 1, 1, False)
     if args.test:
         test(global_step)
         exit(-1)
@@ -263,7 +263,7 @@ if __name__ == "__main__":
     global train_ir_loader
     tb_logger = SummaryWriter(home + '/events/')
     
-    _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2, train_data_dir+'/FLIR.txt')
+    _, train_ir_loader, n = build_dataset(None, train_ir_dir, batch_size, 2, False, train_data_dir+'/FLIR.txt')
 
     steps_epoch = global_step // n
     save_model(model, global_step, home)

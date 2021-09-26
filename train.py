@@ -8,6 +8,8 @@ import numpy as np
 from model import *
 from common import *
 import shutil
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 torch.backends.cudnn.enabled = True
 
@@ -41,6 +43,8 @@ save_model_freq = 50000
 out_channel_N = 192
 out_channel_M = 320
 
+enable_dist = False
+
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
 parser.add_argument('--finetune', action='store_true')
@@ -56,6 +60,7 @@ parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')
 parser.add_argument('-f', '--freeze', default=0, type=int, help='freeze steps for ir and rgb pretrain parameters')
+parser.add_argument("--local_rank", default=-1, type=int)
 
 def parse_config(args):
     config = json.load(open(args.config))
@@ -109,16 +114,16 @@ def parse_config(args):
     global home, enable_wandb, wandb_project, wandb_recovery
     run_name = config['run_name'] if 'run_name' in config else 'unknown'
     home += run_name
-    if not args.test:
+    if not enable_dist or dist.get_rank() == 0 and not args.test:
         if not os.path.exists(home):
             os.mkdir(home)
         else:
-            print("home dir is already exists.")
+            logger.info("home dir is already exists.")
         shutil.copyfile(args.config, os.path.join(home, 'config.json'))
         if not os.path.exists(home + "/snapshot"):
             os.mkdir(home + "/snapshot") # to save model
         else:
-            print("snapshot dir is already exists.")
+            logger.info("snapshot dir is already exists.")
         if 'wandb' in config and 'enable' in config['wandb'] and 'project' in config['wandb']:
             enable_wandb = config['wandb']['enable']
             if not enable_wandb:
@@ -128,7 +133,7 @@ def parse_config(args):
                 os.environ["WANDB_MODE"] = "dryrun"
             if 'recovery' in config['wandb']:
                 wandb_recovery = config['wandb']['recovery']
-                print('recovery wandb to task: ', wandb_recovery)
+                logger.info('recovery wandb to task: ', wandb_recovery)
             if wandb_recovery == "":
                 wandb.init(sync_tensorboard=True, project=wandb_project, name=run_name, dir=home)
             else:
@@ -151,7 +156,8 @@ def adjust_learning_rate(optimizer, global_step):
 
 
 def train(epoch, global_step):
-    logger.info("Epoch {} begin".format(epoch))
+    if not enable_dist or dist.get_rank() == 0:
+        logger.info("Epoch {} begin".format(epoch))
     net.train()
     global optimizer
     elapsed, losses, rgb_psnrs, ir_psnrs, bpps, rgb_bpps, ir_bpps, \
@@ -161,7 +167,8 @@ def train(epoch, global_step):
     log_ready = False
     for _, input in enumerate(zip(train_rgb_loader, train_ir_loader)):
         if args.freeze and global_step == args.freeze: # finish freezing
-            logger.info(f"Unfreeze paramaters at step {global_step}")
+            if not enable_dist or dist.get_rank() == 0:
+                logger.info(f"Unfreeze paramaters at step {global_step}")
             for name, param in net.named_parameters():
                 if (args.mode == 'train_ir' and 'rgb' not in name) or \
                    (args.mode == 'train_rgb' and 'ir' not in name):
@@ -175,9 +182,6 @@ def train(epoch, global_step):
         global_step += 1
         _, _, rgb_mse_loss, ir_mse_loss, \
                 rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
-        rgb_mse_loss, ir_mse_loss = rgb_mse_loss.mean(), ir_mse_loss.mean()
-        rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = \
-            rgb_bpp_feature.sum(), ir_bpp_feature.sum(), rgb_bpp_z.sum(), ir_bpp_z.sum(), rgb_bpp.sum(), ir_bpp.sum()
         bpp = rgb_bpp if args.mode == 'train_rgb' else ir_bpp
         distribution_loss = bpp
         mse_loss = rgb_mse_loss if args.mode == 'train_rgb' else ir_mse_loss
@@ -214,12 +218,12 @@ def train(epoch, global_step):
             ir_mse_losses.update(ir_mse_loss.item())
             log_ready = True
 
-        if log_ready and (global_step % print_freq) == 0:
+        if log_ready and (global_step % print_freq) == 0 and (not enable_dist or dist.get_rank() == 0):
             train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, \
                 rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, \
                 ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features)
 
-        if (global_step % save_model_freq) == 0:
+        if (global_step % save_model_freq) == 0 and (not enable_dist or dist.get_rank() == 0):
             save_model(model, global_step, home)
             test(global_step)
             net.train()
@@ -282,6 +286,11 @@ def test(step):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    enable_dist = (torch.cuda.device_count() > 1)
+    # distribute
+    if enable_dist:
+        torch.cuda.set_device(args.local_rank)
+        torch.distributed.init_process_group(backend='nccl')
     parse_config(args)
     torch.manual_seed(seed=args.seed)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s] %(message)s')
@@ -289,22 +298,25 @@ if __name__ == "__main__":
     stdhandler = logging.StreamHandler()
     stdhandler.setLevel(logging.INFO)
     stdhandler.setFormatter(formatter)
-    logger.addHandler(stdhandler)
+    if not enable_dist or dist.get_rank() == 0:
+        logger.addHandler(stdhandler)
     
-    filehandler = logging.FileHandler(home + '/log.txt')
-    filehandler.setLevel(logging.INFO)
-    filehandler.setFormatter(formatter)
-    logger.addHandler(filehandler)
+        filehandler = logging.FileHandler(home + '/log.txt')
+        filehandler.setLevel(logging.INFO)
+        filehandler.setFormatter(formatter)
 
-    logger.setLevel(logging.INFO)
-    logger.info("image compression training")
-    logger.info("config : ")
-    logger.info(open(args.config).read())
-    logger.info("out_channel_N:{}, out_channel_M:{}".format(out_channel_N, out_channel_M))
-    logger.info('Branch: Master')
+        logger.addHandler(filehandler)
+
+        logger.setLevel(logging.INFO)
+        logger.info("image compression training")
+        logger.info("config : ")
+        logger.info(open(args.config).read())
+        logger.info("out_channel_N:{}, out_channel_M:{}".format(out_channel_N, out_channel_M))
+        logger.info('Branch: Master')
 
     if args.mode not in ['train_rgb', 'train_ir']:
-        logger.info(f'unknown mode \'{args.mode}\', use \'train_rgb\' or \'train_ir\'')
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info(f'unknown mode \'{args.mode}\', use \'train_rgb\' or \'train_ir\'')
         exit(-1)
     
     model = MultiCompression(in_channel1=3, 
@@ -314,13 +326,16 @@ if __name__ == "__main__":
                              mode=args.mode)
 
     if args.pretrain_rgb != '':
-        logger.info("loading model:{}".format(args.pretrain_rgb))
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info("loading model:{}".format(args.pretrain_rgb))
         load_model(model, args.pretrain_rgb)
     if args.pretrain_ir != '':
-        logger.info("loading model:{}".format(args.pretrain_ir))
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info("loading model:{}".format(args.pretrain_ir))
         load_model(model, args.pretrain_ir)
     if args.pretrain != '':
-        logger.info("loading model:{}".format(args.pretrain))
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
         if args.finetune:
             global_step = 0
@@ -332,31 +347,42 @@ if __name__ == "__main__":
             param.requires_grad = False
     # freeze
     if args.freeze != 0:
-        logger.info(f"Freeze parameters for {args.freeze} steps")
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info(f"Freeze parameters for {args.freeze} steps")
         for name, param in net.named_parameters():
             if "align" not in name and "fusion" not in name:
                 param.requires_grad = False
     
-    logger.info(net)
-    net = torch.nn.DataParallel(net, list(range(gpu_num)))
+    if not enable_dist or dist.get_rank() == 0:
+        logger.info(net)
+    if enable_dist:
+        net = DDP(net, 
+            find_unused_parameters=True, 
+            device_ids=[args.local_rank], 
+            output_device=args.local_rank)
     parameters = net.parameters()
 
-    test_rgb_loader, test_ir_loader, _ = build_dataset(test_rgb_dir, test_ir_dir, 1, 1)
+    test_rgb_loader, test_ir_loader, _ = build_dataset(test_rgb_dir, test_ir_dir, 1, 1, False)
     if args.test:
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)
 
-    tb_logger = SummaryWriter(home + '/events/')
+    if not enable_dist or dist.get_rank() == 0:
+        tb_logger = SummaryWriter(home + '/events/')
 
-    train_rgb_loader, train_ir_loader, n = build_dataset(train_rgb_dir, train_ir_dir, batch_size, 2, train_data_dir+'/FLIR.txt')
+    train_rgb_loader, train_ir_loader, n = build_dataset(train_rgb_dir, train_ir_dir, \
+        batch_size // torch.cuda.device_count(), 2, enable_dist, train_data_dir+'/FLIR.txt')
 
     steps_epoch = global_step // n
-    save_model(model, global_step, home)
+    if not enable_dist or dist.get_rank() == 0:
+        save_model(model, global_step, home)
     for epoch in range(steps_epoch, tot_epoch):
         adjust_learning_rate(optimizer, global_step)
         if global_step > tot_step:
-            save_model(model, global_step, home)
+            if not enable_dist or dist.get_rank() == 0:
+                save_model(model, global_step, home)
             break
         global_step = train(epoch, global_step)
-        save_model(model, global_step, home)
+        if not enable_dist or dist.get_rank() == 0:
+            save_model(model, global_step, home)
