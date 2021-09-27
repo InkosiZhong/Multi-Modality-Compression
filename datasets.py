@@ -49,7 +49,7 @@ def build_dataset(rgb_dir, ir_dir, batch_size, num_workders, dist = False, data_
     n = 0
     if rgb_dir is not None:
         rgb_dataset = Datasets(rgb_dir, data_list=data_list, channels=3)
-        rgb_sampler = DistributedSampler(rgb_dataset, shuffle=False) if dist else None
+        rgb_sampler = (DistributedSampler(rgb_dataset, shuffle=False) if dist else None)
         rgb_loader = DataLoader(dataset=rgb_dataset,
                                 batch_size=batch_size,
                                 shuffle=False,
@@ -63,7 +63,7 @@ def build_dataset(rgb_dir, ir_dir, batch_size, num_workders, dist = False, data_
     
     if ir_dir is not None:
         ir_dataset = Datasets(ir_dir, data_list=data_list, channels=1)
-        ir_sampler = DistributedSampler(ir_dataset, shuffle=False) if dist else None
+        ir_sampler = (DistributedSampler(ir_dataset, shuffle=False) if dist else None)
         ir_loader = DataLoader(dataset=ir_dataset,
                                 batch_size=batch_size,
                                 shuffle=False,

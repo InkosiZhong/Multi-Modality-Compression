@@ -145,6 +145,7 @@ def train(epoch, global_step):
 
     log_ready = False
     for _, input in enumerate(train_rgb_loader):
+        adjust_learning_rate(optimizer, global_step)
         input = input.cuda()
         start_time = time.time()
         global_step += 1
@@ -268,7 +269,6 @@ if __name__ == "__main__":
     steps_epoch = global_step // n
     save_model(model, global_step, home)
     for epoch in range(steps_epoch, tot_epoch):
-        adjust_learning_rate(optimizer, global_step)
         if global_step > tot_step:
             save_model(model, global_step, home)
             break

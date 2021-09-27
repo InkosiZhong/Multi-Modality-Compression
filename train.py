@@ -245,6 +245,7 @@ def test(step):
         ir_sumMsssimDB = 0
         cnt = 0
         for _, input in enumerate(zip(test_rgb_loader, test_ir_loader)):
+            adjust_learning_rate(optimizer, global_step)
             rgb_input, ir_input = input
             rgb_input = rgb_input.cuda()
             ir_input = ir_input.cuda()
@@ -378,7 +379,6 @@ if __name__ == "__main__":
     if not enable_dist or dist.get_rank() == 0:
         save_model(model, global_step, home)
     for epoch in range(steps_epoch, tot_epoch):
-        adjust_learning_rate(optimizer, global_step)
         if global_step > tot_step:
             if not enable_dist or dist.get_rank() == 0:
                 save_model(model, global_step, home)
