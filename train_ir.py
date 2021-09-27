@@ -43,6 +43,7 @@ parser.add_argument('-p', '--pretrain', default = '',
         help='load pretrain model')
 parser.add_argument('--finetune', action='store_true')
 parser.add_argument('--test', action='store_true')
+parser.add_argument('-v', '--visualize', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')

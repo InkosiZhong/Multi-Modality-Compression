@@ -1,9 +1,11 @@
 import os
 import argparse
+from posixpath import basename
 import torch
 import json
 import logging
 import wandb
+import torchvision.utils as vutil
 
 gpu_num = torch.cuda.device_count()
 logger = logging.getLogger("MDMC")
@@ -94,3 +96,12 @@ def load_model(model, f):
         return int(f[st:ed])
     else:
         return 0
+
+
+def hook_func(module, input, output):
+    def _get_name(module):
+        pass
+    image_name = _get_name(module)
+    data = output.clone().detach()
+    data = data.permute(1, 0, 2, 3)
+    vutil.save_image(data, image_name)
