@@ -137,3 +137,63 @@ def conv2d_same_padding(input, weight, bias=None, stride=1, padding=0, dilation=
     return F.conv2d(input, weight, bias, stride,
                   padding=(padding_rows // 2, padding_cols // 2),
                   dilation=dilation, groups=groups)
+
+class ResidualBlock_noBN(nn.Module):
+    '''Residual block w/o BN
+    ---Conv-ReLU-Conv-+-
+     |________________|
+    '''
+
+    def __init__(self, nf=128, ks=3):
+        super(ResidualBlock_noBN, self).__init__()
+        self.conv1 = nn.Conv2d(nf, nf, ks, 1, ks//2, bias=True)
+        self.conv2 = nn.Conv2d(nf, nf, ks, 1, ks//2, bias=True)
+
+    def forward(self, x):
+        identity = x
+        out = F.relu(self.conv1(x))
+        out = self.conv2(out)
+        return identity + out
+
+
+class Resblocks(nn.Module):
+
+    def __init__(self, nf=128, ks=3):
+        super(Resblocks, self).__init__()
+        self.res1 = ResidualBlock_noBN(nf, ks)
+        self.res2 = ResidualBlock_noBN(nf, ks)
+        self.res3 = ResidualBlock_noBN(nf, ks)
+
+    def forward(self, x):
+        return x + self.res3(self.res2(self.res1(x)))
+
+
+class FeatureEncoder(nn.Module):
+    '''
+    Feature Encoder
+    '''
+    def __init__(self, in_channel=3, nf=64, stride=2):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channel, nf, 3, stride, 1)
+        self.lrelu = nn.LeakyReLU(negative_slope=0.1)
+        self.feature_extraction = Resblocks(nf)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        return self.feature_extraction(x)
+
+
+class FeatureDecoder(nn.Module):
+    '''
+    Feature Decoder
+    '''
+    def __init__(self, out_channel=3, nf=64, stride=2):
+        super().__init__()
+        self.recon_trunk = Resblocks(nf)
+        self.lrelu = nn.LeakyReLU(negative_slope=0.1)
+        self.deconv1 = nn.ConvTranspose2d(nf, out_channel, 3, stride=stride, padding=1, output_padding=stride-1)
+
+    def forward(self, x):
+        x = self.recon_trunk(x)
+        x = self.deconv1(x)
+        return x

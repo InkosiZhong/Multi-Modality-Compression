@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch
 from .GDN import GDN
 
-
 class MultiEncoder(nn.Module):
     def __init__(self, in_channel2=1, out_channel_N=192, out_channel_M=320):
         super().__init__()

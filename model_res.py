@@ -6,6 +6,7 @@ from models.ir_encoder import MultiEncoder
 from models.ir_decoder import MultiDecoder
 from models.rgb_encoder_res import RGBEncoder
 from models.rgb_decoder_res import RGBDecoder
+from models.basics import FeatureEncoder
 
 class MultiCompression(nn.Module):
     def __init__(self, in_channel1=3, in_channel2=1, out_channel_N=192, out_channel_M=192, mode='train_rgb'):
@@ -18,7 +19,7 @@ class MultiCompression(nn.Module):
         self.irBitEstimator_z = BitEstimator(out_channel_N)
         self.irContextPrediction = Context_prediction_net(out_channel_M=out_channel_M)
         self.irEntropyParameters = Entropy_parameter_net(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
-        self._feat_conv = nn.Conv2d(in_channel2, 64, 3, stride=1, padding=1)
+        self._feat_encoder = FeatureEncoder(in_channel2, 64, 1)
         # rgb
         self.rgb_encoder = RGBEncoder(in_channel1, out_channel_N, out_channel_M)
         self.rgb_decoder = RGBDecoder(in_channel1, out_channel_N, out_channel_M)
@@ -58,7 +59,7 @@ class MultiCompression(nn.Module):
         ir_recon_image = self.decoder(ir_compressed_feature_renorm)
 
         # rgb
-        _ir = self._feat_conv(ir_recon_image)
+        _ir = self._feat_encoder(ir_recon_image)
         rgb_feature = self.rgb_encoder(input_rgb, _ir)
 
         rgb_quant_noise_feature = torch.zeros(input_rgb.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
