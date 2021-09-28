@@ -260,7 +260,7 @@ if __name__ == "__main__":
     test_rgb_loader, _, _ = build_dataset(test_rgb_dir, None, 1, 1, False)
     if args.test:
         if args.visualize:
-            build_vis_hook(net, ['module.encoder.rgb_conv1'])
+            build_vis_hook(net, {'module.encoder.rgb_conv1' : 'RGB'})
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)

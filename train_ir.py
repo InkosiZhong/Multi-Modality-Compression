@@ -260,7 +260,7 @@ if __name__ == "__main__":
     _, test_ir_loader, _ = build_dataset(None, test_ir_dir, 1, 1, False)
     if args.test:
         if args.visualize:
-            build_vis_hook(net, ['module.encoder.ir_conv1'])
+            build_vis_hook(net, {'module.encoder.ir_conv1':'IR'})
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)

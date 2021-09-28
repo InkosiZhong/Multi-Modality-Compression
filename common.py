@@ -1,3 +1,4 @@
+from genericpath import exists
 import os
 import argparse
 from posixpath import basename
@@ -101,23 +102,27 @@ def load_model(model, f):
 
 vis_idx = ''
 def _vis_hook(module, input, output, name):
-    def _get_name():
-        global vis_idx
-        return os.path.join('./visualize', f'{vis_idx}_{name}.jpg')
-    image_name = _get_name()
+    def _mkdir():
+        if not os.path.exists(path):
+            os.mkdir(path)
+    path = f'./visualize/{vis_idx}'
+    _mkdir()
+    path = f'./visualize/{vis_idx}/{name}'
+    _mkdir()
     data = output.clone().detach()
     data = data.permute(1, 0, 2, 3)
-    vutil.save_image(data, image_name)
+    for i, d in enumerate(data):
+        vutil.save_image(d, os.path.join(path, f'{i}.jpg'))
 
 
 def _build_vis_hook(name):
     return partial(_vis_hook, name=name)
 
 
-def build_vis_hook(model, vis_layers):
+def build_vis_hook(model, vis_layers: dict):
     for n, m in model.named_modules():
         if n in vis_layers:
-            m.register_forward_hook(_build_vis_hook(n))
+            m.register_forward_hook(_build_vis_hook(vis_layers[n]))
 
 
 def set_vis_idx(idx):
