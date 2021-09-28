@@ -60,7 +60,7 @@ class MultiCompression(nn.Module):
 
         # rgb
         _ir = self._feat_encoder(ir_recon_image)
-        rgb_feature = self.rgb_encoder(input_rgb, _ir)
+        rgb_feature, _ir = self.rgb_encoder(input_rgb, _ir)
 
         rgb_quant_noise_feature = torch.zeros(input_rgb.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
         rgb_quant_noise_z = torch.zeros(input_rgb.size(0), self.out_channel_N, input_rgb.size(2) // 64, input_rgb.size(3) // 64).cuda()
@@ -121,7 +121,8 @@ class MultiCompression(nn.Module):
         rgb_shape = input_rgb.size()
         rgb_bpp_feature = rgb_total_bits_feature / (batch_size * rgb_shape[2] * rgb_shape[3])
         rgb_bpp_z = rgb_total_bits_z / (batch_size * rgb_shape[2] * rgb_shape[3])
-        rgb_bpp = rgb_bpp_feature + rgb_bpp_z
+        rgb_bpp_sft = 64 * 2 * 4 / input_ir.shape[2] / input_ir.shape[3]
+        rgb_bpp = rgb_bpp_feature + rgb_bpp_z + rgb_bpp_sft
 
         # ir
         ir_total_bits_feature, _ = feature_probs_based_sigma_nips(ir_compressed_feature_renorm, ir_mu, ir_sigma)
