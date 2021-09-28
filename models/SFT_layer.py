@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-class SFT_layer(nn.modules):
+class SFT_layer(nn.Module):
     '''
     (rgb, _ir) -> conv -> conv -> (gamma, beta)
            |                         | *    | +

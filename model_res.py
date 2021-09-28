@@ -60,7 +60,7 @@ class MultiCompression(nn.Module):
 
         # rgb
         _ir = self._feat_encoder(ir_recon_image)
-        rgb_feature, _ir = self.rgb_encoder(input_rgb, _ir)
+        rgb_feature = self.rgb_encoder(input_rgb, _ir)
 
         rgb_quant_noise_feature = torch.zeros(input_rgb.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
         rgb_quant_noise_z = torch.zeros(input_rgb.size(0), self.out_channel_N, input_rgb.size(2) // 64, input_rgb.size(3) // 64).cuda()
