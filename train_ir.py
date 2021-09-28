@@ -198,7 +198,8 @@ def test(step):
         sumMsssim = 0
         sumMsssimDB = 0
         cnt = 0
-        for _, input in enumerate(test_ir_loader):
+        for i, input in enumerate(test_ir_loader):
+            set_vis_idx(i)
             input = input.cuda()
             clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
             mse_loss, bpp_feature, bpp_z, bpp = \
@@ -258,6 +259,8 @@ if __name__ == "__main__":
     global test_ir_loader
     _, test_ir_loader, _ = build_dataset(None, test_ir_dir, 1, 1, False)
     if args.test:
+        if args.visualize:
+            build_vis_hook(net, ['module.encoder.ir_conv1'])
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)

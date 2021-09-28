@@ -6,6 +6,7 @@ import json
 import logging
 import wandb
 import torchvision.utils as vutil
+from functools import partial
 
 gpu_num = torch.cuda.device_count()
 logger = logging.getLogger("MDMC")
@@ -98,10 +99,27 @@ def load_model(model, f):
         return 0
 
 
-def hook_func(module, input, output):
-    def _get_name(module):
-        pass
-    image_name = _get_name(module)
+vis_idx = ''
+def _vis_hook(module, input, output, name):
+    def _get_name():
+        global vis_idx
+        return os.path.join('./visualize', f'{vis_idx}_{name}.jpg')
+    image_name = _get_name()
     data = output.clone().detach()
     data = data.permute(1, 0, 2, 3)
     vutil.save_image(data, image_name)
+
+
+def _build_vis_hook(name):
+    return partial(_vis_hook, name=name)
+
+
+def build_vis_hook(model, vis_layers):
+    for n, m in model.named_modules():
+        if n in vis_layers:
+            m.register_forward_hook(_build_vis_hook(n))
+
+
+def set_vis_idx(idx):
+    global vis_idx
+    vis_idx = idx

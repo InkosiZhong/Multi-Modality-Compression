@@ -43,6 +43,7 @@ parser.add_argument('-p', '--pretrain', default = '',
         help='load pretrain model')
 parser.add_argument('--finetune', action='store_true')
 parser.add_argument('--test', action='store_true')
+parser.add_argument('-v', '--visualize', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')
@@ -197,7 +198,8 @@ def test(step):
         sumMsssim = 0
         sumMsssimDB = 0
         cnt = 0
-        for _, input in enumerate(test_rgb_loader):
+        for i, input in enumerate(test_rgb_loader):
+            set_vis_idx(i)
             input = input.cuda()
             clipped_recon_image, mse_loss, bpp_feature, bpp_z, bpp = net(input)
             mse_loss, bpp_feature, bpp_z, bpp = \
@@ -257,6 +259,8 @@ if __name__ == "__main__":
     global test_rgb_loader
     test_rgb_loader, _, _ = build_dataset(test_rgb_dir, None, 1, 1, False)
     if args.test:
+        if args.visualize:
+            build_vis_hook(net, ['module.encoder.rgb_conv1'])
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)

@@ -56,6 +56,7 @@ parser.add_argument('-i', '--pretrain_ir', default = '',
         help='load ir pretrain model')
 parser.add_argument('-m', '--mode', help='MDMC mode: train_ir, train_rgb')
 parser.add_argument('--test', action='store_true')
+parser.add_argument('-v', '--visualize', action='store_true')
 parser.add_argument('--config', dest='config', required=False,
         help = 'hyperparameter in json format')
 parser.add_argument('--seed', default=234, type=int, help='seed for random functions, and network initialization')
@@ -166,6 +167,7 @@ def train(epoch, global_step):
 
     log_ready = False
     for _, input in enumerate(zip(train_rgb_loader, train_ir_loader)):
+        adjust_learning_rate(optimizer, global_step)
         if args.freeze and global_step == args.freeze: # finish freezing
             if not enable_dist or dist.get_rank() == 0:
                 logger.info(f"Unfreeze paramaters at step {global_step}")
@@ -245,7 +247,6 @@ def test(step):
         ir_sumMsssimDB = 0
         cnt = 0
         for _, input in enumerate(zip(test_rgb_loader, test_ir_loader)):
-            adjust_learning_rate(optimizer, global_step)
             rgb_input, ir_input = input
             rgb_input = rgb_input.cuda()
             ir_input = ir_input.cuda()
@@ -365,6 +366,8 @@ if __name__ == "__main__":
 
     test_rgb_loader, test_ir_loader, _ = build_dataset(test_rgb_dir, test_ir_dir, 1, 1, False)
     if args.test:
+        if args.visualize:
+            build_vis_hook(net, [])
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)
