@@ -101,6 +101,7 @@ def load_model(model, f):
 
 
 vis_idx = ''
+log_dir = './visualize/log.txt'
 def _vis_hook(module, input, output, name):
     def _mkdir():
         if not os.path.exists(path):
@@ -111,6 +112,8 @@ def _vis_hook(module, input, output, name):
     _mkdir()
     data = output.clone().detach()
     data = data.permute(1, 0, 2, 3)
+    with open(log_dir, 'a') as f:
+        f.write(f'{vis_idx}_{name}: {torch.mean(torch.abs(data)):.6f}\n')
     for i, d in enumerate(data):
         vutil.save_image(d, os.path.join(path, f'{i}.jpg'))
 
