@@ -3,10 +3,11 @@ import torch.nn as nn
 import math
 from models import *
 from models.ir_encoder import MultiEncoder
-from models.ir_decoder import MultiDecoder
+from models.ir_decoder import MultiDecoder, yDecoder
 from models.rgb_encoder_res import RGBEncoder
 from models.rgb_decoder_res import RGBDecoder
 from models.basics import FeatureEncoder
+from models.SFT_layer import SFT_layer
 
 class MultiCompression(nn.Module):
     def __init__(self, in_channel1=3, in_channel2=1, out_channel_N=192, out_channel_M=192, mode='train_rgb'):
@@ -20,6 +21,8 @@ class MultiCompression(nn.Module):
         self.irContextPrediction = Context_prediction_net(out_channel_M=out_channel_M)
         self.irEntropyParameters = Entropy_parameter_net(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self._feat_encoder = FeatureEncoder(in_channel2, 64, 1)
+        #self.y_decoder = yDecoder(64, out_channel_N)
+        #self.sft_layer = SFT_layer(64)
         # rgb
         self.rgb_encoder = RGBEncoder(in_channel1, out_channel_N, out_channel_M)
         self.rgb_decoder = RGBDecoder(in_channel1, out_channel_N, out_channel_M)
@@ -60,7 +63,10 @@ class MultiCompression(nn.Module):
 
         # rgb
         _ir = self._feat_encoder(ir_recon_image)
-        rgb_feature, _ir = self.rgb_encoder(input_rgb, _ir)
+        #_ir = self.sft_layer(self.y_decoder(ir_compressed_feature_renorm), _ir)
+
+        rgb_feature, _ir, rgb_bpp_sft = self.rgb_encoder(input_rgb, _ir)
+        #rgb_bpp_sft = 64 * 2 * 4 / input_ir.shape[2] / input_ir.shape[3]
 
         rgb_quant_noise_feature = torch.zeros(input_rgb.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
         rgb_quant_noise_z = torch.zeros(input_rgb.size(0), self.out_channel_N, input_rgb.size(2) // 64, input_rgb.size(3) // 64).cuda()
@@ -121,7 +127,6 @@ class MultiCompression(nn.Module):
         rgb_shape = input_rgb.size()
         rgb_bpp_feature = rgb_total_bits_feature / (batch_size * rgb_shape[2] * rgb_shape[3])
         rgb_bpp_z = rgb_total_bits_z / (batch_size * rgb_shape[2] * rgb_shape[3])
-        rgb_bpp_sft = 64 * 2 * 4 / input_ir.shape[2] / input_ir.shape[3]
         rgb_bpp = rgb_bpp_feature + rgb_bpp_z + rgb_bpp_sft
 
         # ir
