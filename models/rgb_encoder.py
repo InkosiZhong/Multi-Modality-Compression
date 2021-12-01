@@ -5,7 +5,7 @@ import torch
 from .GDN import GDN
 
 
-class MultiEncoder(nn.Module):
+class RGBEncoder(nn.Module):
     def __init__(self, in_channel1=3, out_channel_N=192, out_channel_M=320):
         super().__init__()
         # rgb:

@@ -9,8 +9,8 @@ from models.rgb_decoder import *
 class MultiCompression(nn.Module):
     def __init__(self, in_channel1=3, out_channel_N=192, out_channel_M=192):
         super().__init__()
-        self.encoder = MultiEncoder(in_channel1=in_channel1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
-        self.decoder = MultiDecoder(out_channel1=in_channel1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.encoder = RGBEncoder(in_channel1=in_channel1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.decoder = RGBDecoder(out_channel1=in_channel1, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         # rgb
         self.rgbPriorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.rgbPriorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)

@@ -24,8 +24,9 @@ def create_train_log(tb_logger, log, global_step, prefix, value, k=5):
 
 
 def train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, # both
-    rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, # rgb
-    ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features): # ir
+    rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features,# rgb
+    ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features, 
+    rgb_msssim=None, ir_msssim=None): # ir
 
     process = global_step / tot_step * 100.0
     log = f'Step [{global_step}/{tot_step}={process:.2f}%]'
@@ -49,6 +50,8 @@ def train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapse
         log += f' | rgb_mse_loss {rgb_mse_losses.val:.5f} ({rgb_mse_losses.avg:.5f})'
     if ir_mse_losses is not None:
         log += f' | ir_mse_loss {ir_mse_losses.val:.5f} ({ir_mse_losses.avg:.5f})'
+    log = create_train_log(tb_logger, log, global_step, 'msssim(rgb)', rgb_msssim)
+    log = create_train_log(tb_logger, log, global_step, 'msssim(ir)', ir_msssim)
 
     logger.info(log)
 
@@ -84,13 +87,26 @@ def save_model(model, iter, home):
     torch.save(model.state_dict(), home+"/snapshot/iter_{}.pth.tar".format(iter))
 
 
-def load_model(model, f):
+def load_model(model, f, rgb=False):
     with open(f, 'rb') as f:
         pretrained_dict = torch.load(f)
+        print('pretrain params: ', len(pretrained_dict.keys()))
         model_dict = model.state_dict()
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        model_dict.update(pretrained_dict)
+        dict = {}
+        if rgb:
+            for k, v in pretrained_dict.items():
+                k1 = k.split('.')
+                if k1[0] == 'encoder' or k1[0] == 'decoder':
+                    k1[0] = 'rgb_' + k1[0]
+                    k = '.'.join(k1)
+                if k in model_dict:
+                    dict[k] = v
+        else:
+            dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        print('loaded params: ', len(dict.keys()))
+        model_dict.update(dict)
         model.load_state_dict(model_dict)
+
     f = str(f)
     if f.find('iter_') != -1 and f.find('.pth') != -1:
         st = f.find('iter_') + 5

@@ -9,8 +9,8 @@ from models.ir_decoder import *
 class MultiCompression(nn.Module):
     def __init__(self, in_channel2=1, out_channel_N=192, out_channel_M=192):
         super().__init__()
-        self.encoder = MultiEncoder(in_channel2=in_channel2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
-        self.decoder = MultiDecoder(out_channel2=in_channel2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.encoder = IREncoder(in_channel2=in_channel2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.decoder = IRDecoder(out_channel2=in_channel2, out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         # ir
         self.irPriorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.irPriorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)

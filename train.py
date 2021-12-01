@@ -47,8 +47,11 @@ enable_dist = False
 
 parser = argparse.ArgumentParser(description='Pytorch reimplement for variational image compression with a scale hyperprior')
 
+parser.add_argument('--msssim', action='store_true')
 parser.add_argument('--finetune', action='store_true')
 parser.add_argument('-p', '--pretrain', default = '',
+        help='load pretrain model')
+parser.add_argument('-pf', '--pretrain_freeze', default = '',
         help='load pretrain model')
 parser.add_argument('-r', '--pretrain_rgb', default = '',
         help='load rgb pretrain model')
@@ -164,18 +167,16 @@ def train(epoch, global_step):
     elapsed, losses, rgb_psnrs, ir_psnrs, bpps, rgb_bpps, ir_bpps, \
         rgb_bpp_features, ir_bpp_features, rgb_bpp_zs, ir_bpp_zs, \
         rgb_mse_losses, ir_mse_losses = [AverageMeter(print_freq) for _ in range(13)]
+    msssims = AverageMeter(print_freq) if args.msssim else None
 
     log_ready = False
     for _, input in enumerate(zip(train_rgb_loader, train_ir_loader)):
         adjust_learning_rate(optimizer, global_step)
-        if args.freeze and global_step == args.freeze: # finish freezing
-            if not enable_dist or dist.get_rank() == 0:
-                logger.info(f"Unfreeze paramaters at step {global_step}")
+        if args.pretrain_freeze and global_step >= 500000:
             for name, param in net.named_parameters():
-                if (args.mode == 'train_ir' and 'rgb' not in name) or \
-                   (args.mode == 'train_rgb' and 'ir' not in name):
+                if not ((args.mode == 'train_ir' and 'rgb' in name) or \
+                (args.mode == 'train_rgb' and 'ir' in name)):
                     param.requires_grad = True
-            optimizer = optim.Adam(net.parameters(), lr=cur_lr)
 
         rgb_input, ir_input = input
         rgb_input = rgb_input.cuda()
@@ -183,12 +184,16 @@ def train(epoch, global_step):
         start_time = time.time()
         global_step += 1
         _, _, rgb_mse_loss, ir_mse_loss, \
-                rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp = net(rgb_input, ir_input)
+                rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp, \
+                msssim = net(rgb_input, ir_input)
         bpp = rgb_bpp if args.mode == 'train_rgb' else ir_bpp
         distribution_loss = bpp
         mse_loss = rgb_mse_loss if args.mode == 'train_rgb' else ir_mse_loss
         distortion = mse_loss
-        rd_loss = train_lambda * distortion + distribution_loss
+        if args.msssim:
+            rd_loss = train_lambda / 48 * (1 - msssim) + distribution_loss
+        else:
+            rd_loss = train_lambda * distortion + distribution_loss
         optimizer.zero_grad()
         rd_loss.backward()
         def clip_gradient(optimizer, grad_clip):
@@ -207,6 +212,8 @@ def train(epoch, global_step):
             else:
                 rgb_psnrs.update(100)
                 ir_psnrs.update(100)
+            if args.msssim:
+                msssims.update(msssim)
             elapsed.update(time.time() - start_time)
             losses.update(rd_loss.item())
             bpps.update(bpp.item())
@@ -223,7 +230,8 @@ def train(epoch, global_step):
         if log_ready and (global_step % print_freq) == 0 and (not enable_dist or dist.get_rank() == 0):
             train_logger(tb_logger, global_step, tot_step, epoch, cur_lr, losses, elapsed, bpps, \
                 rgb_psnrs, rgb_mse_losses, rgb_bpps, rgb_bpp_zs, rgb_bpp_features, \
-                ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features)
+                ir_psnrs, ir_mse_losses, ir_bpps, ir_bpp_zs, ir_bpp_features, \
+                msssim)
 
         if (global_step % save_model_freq) == 0 and (not enable_dist or dist.get_rank() == 0):
             save_model(model, global_step, home)
@@ -246,7 +254,8 @@ def test(step):
         rgb_sumMsssimDB = 0
         ir_sumMsssimDB = 0
         cnt = 0
-        for _, input in enumerate(zip(test_rgb_loader, test_ir_loader)):
+        for i, input in enumerate(zip(test_rgb_loader, test_ir_loader)):
+            set_vis_idx(i)
             rgb_input, ir_input = input
             rgb_input = rgb_input.cuda()
             ir_input = ir_input.cuda()
@@ -325,35 +334,33 @@ if __name__ == "__main__":
                              in_channel2=1, 
                              out_channel_N=out_channel_N, 
                              out_channel_M=out_channel_M,
-                             mode=args.mode)
+                             mode=args.mode,
+                             msssim=args.msssim)
 
-    if args.pretrain_rgb != '':
-        if not enable_dist or dist.get_rank() == 0:
-            logger.info("loading model:{}".format(args.pretrain_rgb))
-        load_model(model, args.pretrain_rgb)
-    if args.pretrain_ir != '':
-        if not enable_dist or dist.get_rank() == 0:
-            logger.info("loading model:{}".format(args.pretrain_ir))
-        load_model(model, args.pretrain_ir)
     if args.pretrain != '':
         if not enable_dist or dist.get_rank() == 0:
             logger.info("loading model:{}".format(args.pretrain))
         global_step = load_model(model, args.pretrain)
         if args.finetune:
             global_step = 0
+    if args.pretrain_rgb != '':
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info("loading model:{}".format(args.pretrain_rgb))
+        load_model(model, args.pretrain_rgb, True)
+    if args.pretrain_ir != '':
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info("loading model:{}".format(args.pretrain_ir))
+        load_model(model, args.pretrain_ir)
+    '''if args.pretrain_freeze != '':
+        if not enable_dist or dist.get_rank() == 0:
+            logger.info("loading model for freeze:{}".format(args.pretrain_freeze))
+        load_model(model, args.pretrain_freeze, True)'''
 
     net = model.cuda()
     for name, param in net.named_parameters():
         if (args.mode == 'train_ir' and 'rgb' in name) or \
            (args.mode == 'train_rgb' and 'ir' in name):
             param.requires_grad = False
-    # freeze
-    if args.freeze != 0:
-        if not enable_dist or dist.get_rank() == 0:
-            logger.info(f"Freeze parameters for {args.freeze} steps")
-        for name, param in net.named_parameters():
-            if "align" not in name and "fusion" not in name:
-                param.requires_grad = False
     
     if not enable_dist or dist.get_rank() == 0:
         logger.info(net)
@@ -367,7 +374,12 @@ if __name__ == "__main__":
     test_rgb_loader, test_ir_loader, _ = build_dataset(test_rgb_dir, test_ir_dir, 1, 1, False)
     if args.test:
         if args.visualize:
-            build_vis_hook(net, [])
+            build_vis_hook(net, {
+                '_feat_encoder' : 'IR', 
+                #'encoder.ir_gdn1': 'IR4SFA',
+                'rgb_encoder.sft_layer' : 'CFA',
+                #'rgb_encoder.align1': 'SFA',
+                'rgb_encoder.feat_encoder' : 'RGB'})
         test(global_step)
         exit(-1)
     optimizer = optim.Adam(parameters, lr=base_lr)
@@ -376,7 +388,7 @@ if __name__ == "__main__":
         tb_logger = SummaryWriter(home + '/events/')
 
     train_rgb_loader, train_ir_loader, n = build_dataset(train_rgb_dir, train_ir_dir, \
-        batch_size // torch.cuda.device_count(), 2, enable_dist, train_data_dir+'/FLIR.txt')
+        batch_size // torch.cuda.device_count(), 2, enable_dist, train_data_dir+'/order.txt')
 
     steps_epoch = global_step // n
     if not enable_dist or dist.get_rank() == 0:

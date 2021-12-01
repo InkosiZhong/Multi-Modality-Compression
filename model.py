@@ -1,58 +1,46 @@
 import torch
 import torch.nn as nn
 import math
+from models.ms_ssim_torch import MS_SSIM
 from models import *
-from models.multi_encoder import *
-from models.multi_decoder import *
-
+from models.ir_encoder import IREncoder
+from models.ir_decoder import IRDecoder
+from models.multi_encoder import RGBEncoder
+from models.multi_decoder import RGBDecoder
+from models.basics import FeatureEncoder
 
 class MultiCompression(nn.Module):
-    def __init__(self, in_channel1=3, in_channel2=1, out_channel_N=192, out_channel_M=192, mode='train_rgb'):
+    def __init__(self, in_channel1=3, in_channel2=1, out_channel_N=192, out_channel_M=192, mode='train_rgb', msssim=False):
         super().__init__()
-        self.encoder = MultiEncoder(in_channel1, in_channel2, out_channel_N, out_channel_M, mode)
-        self.decoder = MultiDecoder(in_channel1, in_channel2, out_channel_N, out_channel_M, mode)
-        # rgb
-        self.rgbPriorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
-        self.rgbPriorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)
-        self.rgbBitEstimator_z = BitEstimator(out_channel_N)
-        self.rgbContextPrediction = Context_prediction_net(out_channel_M=out_channel_M)
-        self.rgbEntropyParameters = Entropy_parameter_net(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         # ir
+        self.encoder = IREncoder(in_channel2, out_channel_N, out_channel_M)
+        self.decoder = IRDecoder(in_channel2, out_channel_N, out_channel_M)
         self.irPriorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
         self.irPriorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)
         self.irBitEstimator_z = BitEstimator(out_channel_N)
         self.irContextPrediction = Context_prediction_net(out_channel_M=out_channel_M)
         self.irEntropyParameters = Entropy_parameter_net(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self._feat_encoder = FeatureEncoder(in_channel2, 64, 1)
+        # rgb
+        self.rgb_encoder = RGBEncoder(in_channel1, out_channel_N, out_channel_M)
+        self.rgb_decoder = RGBDecoder(in_channel1, out_channel_N, out_channel_M)
+        self.rgbPriorEncoder = Analysis_prior_net_nips(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
+        self.rgbPriorDecoder = Synthesis_prior_net_nips(out_channel_N=out_channel_N)
+        self.rgbBitEstimator_z = BitEstimator(out_channel_N)
+        self.rgbContextPrediction = Context_prediction_net(out_channel_M=out_channel_M)
+        self.rgbEntropyParameters = Entropy_parameter_net(out_channel_N=out_channel_N, out_channel_M=out_channel_M)
 
         self.out_channel_N = out_channel_N
         self.out_channel_M = out_channel_M
         self.mode = mode
 
+        self.msssim = MS_SSIM(data_range=1.) if msssim else None
+
     def forward(self, input_rgb, input_ir):
-        # encoder
-        rgb_feature, ir_feature = self.encoder(input_rgb, input_ir)
-        batch_size = rgb_feature.size()[0]
+        batch_size = input_rgb.size()[0]
+        # ir
+        ir_feature, en_irs = self.encoder(input_ir)
 
-        # rgb
-        rgb_quant_noise_feature = torch.zeros(input_rgb.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
-        rgb_quant_noise_z = torch.zeros(input_rgb.size(0), self.out_channel_N, input_rgb.size(2) // 64, input_rgb.size(3) // 64).cuda()
-        rgb_quant_noise_feature = torch.nn.init.uniform_(torch.zeros_like(rgb_quant_noise_feature), -0.5, 0.5)
-        rgb_quant_noise_z = torch.nn.init.uniform_(torch.zeros_like(rgb_quant_noise_z), -0.5, 0.5)
-        rgb_z = self.rgbPriorEncoder(rgb_feature)
-        if self.training:
-            rgb_compressed_z = rgb_z + rgb_quant_noise_z
-        else:
-            rgb_compressed_z = torch.round(rgb_z)
-        rgb_recon_sigma = self.rgbPriorDecoder(rgb_compressed_z)
-        rgb_feature_renorm = rgb_feature
-        if self.training:
-            rgb_compressed_feature_renorm = rgb_feature_renorm + rgb_quant_noise_feature
-        else:
-            rgb_compressed_feature_renorm = torch.round(rgb_feature_renorm)
-        rgb_predict_context = self.rgbContextPrediction(rgb_compressed_feature_renorm)
-        rgb_entropy_params = self.rgbEntropyParameters(torch.cat((rgb_recon_sigma, rgb_predict_context), 1))
-
-        #ir 
         ir_quant_noise_feature = torch.zeros(input_ir.size(0), self.out_channel_M, input_ir.size(2) // 8, input_ir.size(3) // 8).cuda()
         ir_quant_noise_z = torch.zeros(input_ir.size(0), self.out_channel_N, input_ir.size(2) // 32, input_ir.size(3) // 32).cuda()
         ir_quant_noise_feature = torch.nn.init.uniform_(torch.zeros_like(ir_quant_noise_feature), -0.5, 0.5)
@@ -71,8 +59,34 @@ class MultiCompression(nn.Module):
         ir_predict_context = self.irContextPrediction(ir_compressed_feature_renorm)
         ir_entropy_params = self.irEntropyParameters(torch.cat((ir_recon_sigma, ir_predict_context), 1))
 
-        # decoder
-        rgb_recon_image, ir_recon_image = self.decoder(rgb_compressed_feature_renorm, ir_compressed_feature_renorm)
+        ir_recon_image, de_irs = self.decoder(ir_compressed_feature_renorm)
+
+        # rgb
+        _ir = self._feat_encoder(ir_recon_image)
+        #_ir = self.sft_layer(self.y_decoder(ir_compressed_feature_renorm), _ir)
+
+        rgb_feature, _ir = self.rgb_encoder(input_rgb, en_irs, _ir)
+        rgb_bpp_sft = 64 * 2 * 4 * 8 / input_rgb.shape[2] / input_rgb.shape[3]
+
+        rgb_quant_noise_feature = torch.zeros(input_rgb.size(0), self.out_channel_M, input_rgb.size(2) // 16, input_rgb.size(3) // 16).cuda()
+        rgb_quant_noise_z = torch.zeros(input_rgb.size(0), self.out_channel_N, input_rgb.size(2) // 64, input_rgb.size(3) // 64).cuda()
+        rgb_quant_noise_feature = torch.nn.init.uniform_(torch.zeros_like(rgb_quant_noise_feature), -0.5, 0.5)
+        rgb_quant_noise_z = torch.nn.init.uniform_(torch.zeros_like(rgb_quant_noise_z), -0.5, 0.5)
+        rgb_z = self.rgbPriorEncoder(rgb_feature)
+        if self.training:
+            rgb_compressed_z = rgb_z + rgb_quant_noise_z
+        else:
+            rgb_compressed_z = torch.round(rgb_z)
+        rgb_recon_sigma = self.rgbPriorDecoder(rgb_compressed_z)
+        rgb_feature_renorm = rgb_feature
+        if self.training:
+            rgb_compressed_feature_renorm = rgb_feature_renorm + rgb_quant_noise_feature
+        else:
+            rgb_compressed_feature_renorm = torch.round(rgb_feature_renorm)
+        rgb_predict_context = self.rgbContextPrediction(rgb_compressed_feature_renorm)
+        rgb_entropy_params = self.rgbEntropyParameters(torch.cat((rgb_recon_sigma, rgb_predict_context), 1))
+
+        rgb_recon_image = self.rgb_decoder(rgb_compressed_feature_renorm, de_irs, _ir)
 
         # rgb
         #rgb_entropy_params = rgb_recon_sigma
@@ -113,7 +127,7 @@ class MultiCompression(nn.Module):
         rgb_shape = input_rgb.size()
         rgb_bpp_feature = rgb_total_bits_feature / (batch_size * rgb_shape[2] * rgb_shape[3])
         rgb_bpp_z = rgb_total_bits_z / (batch_size * rgb_shape[2] * rgb_shape[3])
-        rgb_bpp = rgb_bpp_feature + rgb_bpp_z
+        rgb_bpp = rgb_bpp_feature + rgb_bpp_z + rgb_bpp_sft
 
         # ir
         ir_total_bits_feature, _ = feature_probs_based_sigma_nips(ir_compressed_feature_renorm, ir_mu, ir_sigma)
@@ -122,5 +136,8 @@ class MultiCompression(nn.Module):
         ir_bpp_z = ir_total_bits_z / (batch_size * ir_shape[2] * ir_shape[3])
         ir_bpp = ir_bpp_feature + ir_bpp_z
 
+        msssim = self.msssim(input_rgb, rgb_clipped_recon_image) if self.msssim else None # rgb
+
         return rgb_clipped_recon_image, ir_clipped_recon_image, rgb_mse_loss, ir_mse_loss, \
-                rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp
+                rgb_bpp_feature, ir_bpp_feature, rgb_bpp_z, ir_bpp_z, rgb_bpp, ir_bpp, \
+                msssim

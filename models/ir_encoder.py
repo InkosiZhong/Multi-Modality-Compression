@@ -17,8 +17,12 @@ class MultiEncoder(nn.Module):
         self.ir_conv4 = nn.Conv2d(out_channel_N, out_channel_M, 5, stride=2, padding=2)
 
     def forward(self, ir):
+        irs = []
         ir = self.ir_gdn1(self.ir_conv1(ir))
+        irs.append(ir)
         ir = self.ir_gdn2(self.ir_conv2(ir))
+        irs.append(ir)
         ir = self.ir_gdn3(self.ir_conv3(ir))
+        irs.append(ir)
         ir = self.ir_conv4(ir)
-        return ir
+        return ir, irs

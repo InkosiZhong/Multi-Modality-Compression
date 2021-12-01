@@ -2,7 +2,7 @@
 import torch.nn as nn
 from .GDN import GDN
 
-class MultiDecoder(nn.Module):
+class IRDecoder(nn.Module):
     '''
     Decode synthesis
     '''
@@ -18,11 +18,15 @@ class MultiDecoder(nn.Module):
         self.ir_deconv4 = nn.ConvTranspose2d(out_channel_N, out_channel2, 5, stride=1, padding=2, output_padding=0)
 
     def forward(self, ir):
+        irs = []
         ir = self.ir_igdn1(self.ir_deconv1(ir))
+        irs.append(ir)
         ir = self.ir_igdn2(self.ir_deconv2(ir))
+        irs.append(ir)
         ir = self.ir_igdn3(self.ir_deconv3(ir))
+        irs.append(ir)
         ir = self.ir_deconv4(ir) 
-        return ir
+        return ir, irs
 
 
 class yDecoder(nn.Module):
