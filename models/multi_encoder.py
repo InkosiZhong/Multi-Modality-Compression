@@ -21,12 +21,12 @@ class RGBEncoder(nn.Module):
         self.rgb_gdn3 = GDN(out_channel_N)
         self.rgb_conv4 = nn.Conv2d(out_channel_N, out_channel_M, 5, stride=2, padding=2)
 
-        self.align1 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
+        '''self.align1 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv1 = nn.Conv2d(out_channel_N*2, out_channel_N, 1, 1, 0)
         self.align2 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
         self.fusion_conv2 = nn.Conv2d(out_channel_N*2, out_channel_N, 1, 1, 0)
         self.align3 = TAlign(in_chans=out_channel_N, layers_cfg=[2, 3, 2, 8, False])
-        self.fusion_conv3 = nn.Conv2d(out_channel_N*2, out_channel_N, 1, 1, 0)
+        self.fusion_conv3 = nn.Conv2d(out_channel_N*2, out_channel_N, 1, 1, 0)'''
 
     def forward(self, rgb, irs, _ir):
         rgb = self.feat_encoder(rgb)
@@ -34,13 +34,13 @@ class RGBEncoder(nn.Module):
         rgb = torch.cat([rgb, _ir], dim=1)
         
         rgb = self.rgb_gdn1(self.rgb_conv1(rgb))
-        rgb = self.fusion_conv1(torch.cat([rgb, self.align1(irs[0], rgb)], dim=1))
+        #rgb = self.fusion_conv1(torch.cat([rgb, self.align1(irs[0], rgb)], dim=1))
 
         rgb = self.rgb_gdn2(self.rgb_conv2(rgb))
-        rgb = self.fusion_conv2(torch.cat([rgb, self.align2(irs[1], rgb)], dim=1))
+        #rgb = self.fusion_conv2(torch.cat([rgb, self.align2(irs[1], rgb)], dim=1))
 
         rgb = self.rgb_gdn3(self.rgb_conv3(rgb))
-        rgb = self.fusion_conv3(torch.cat([rgb, self.align3(irs[2], rgb)], dim=1))
+        #rgb = self.fusion_conv3(torch.cat([rgb, self.align3(irs[2], rgb)], dim=1))
 
         rgb = self.rgb_conv4(rgb)
         return rgb, _ir

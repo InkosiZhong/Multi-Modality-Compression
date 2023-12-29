@@ -1,7 +1,7 @@
 {
     "tot_epoch": 10000000,
     "tot_step": 2500000,
-    "train_lambda": 2048,
+    "train_lambda": 256,
     "lr": {
         "base": 0.0001,
         "decay": 0.1,
@@ -14,13 +14,13 @@
     "save_model_freq": 50000,
     "cal_step": 400,
 
-    "train_dataset": "../datasets/FLIR/train",
-    "test_dataset": "../datasets/FLIR/test",
+    "train_dataset": "../FLIR/train",
+    "test_dataset": "../KAIST/test",
     "test_num": 25,
 
-    "run_name": "000_baseline_FLIR",
+    "run_name": "test",
     "wandb": {
-        "enable": true,
+        "enable": false,
         "project": "MDMC",
         "recovery": "",
         "dryrun": false

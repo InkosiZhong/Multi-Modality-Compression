@@ -2,7 +2,7 @@
 import torch.nn as nn
 from .GDN import GDN
 
-class MultiDecoder(nn.Module):
+class RGBDecoder(nn.Module):
     '''
     Decode synthesis
     '''

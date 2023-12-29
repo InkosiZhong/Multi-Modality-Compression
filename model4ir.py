@@ -23,7 +23,7 @@ class MultiCompression(nn.Module):
 
     def forward(self, input_ir):
         # encoder
-        ir_feature = self.encoder(input_ir)
+        ir_feature, _ = self.encoder(input_ir)
         batch_size = ir_feature.size()[0]
 
         #ir 
@@ -46,7 +46,7 @@ class MultiCompression(nn.Module):
         ir_entropy_params = self.irEntropyParameters(torch.cat((ir_recon_sigma, ir_predict_context), 1))
 
         # decoder
-        ir_recon_image = self.decoder(ir_compressed_feature_renorm)
+        ir_recon_image, _ = self.decoder(ir_compressed_feature_renorm)
 
         # ir
         #ir_entropy_params = ir_recon_sigma

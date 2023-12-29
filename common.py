@@ -92,6 +92,7 @@ def load_model(model, f, rgb=False):
         pretrained_dict = torch.load(f)
         print('pretrain params: ', len(pretrained_dict.keys()))
         model_dict = model.state_dict()
+        print('model params: ', len(model_dict.keys()))
         dict = {}
         if rgb:
             for k, v in pretrained_dict.items():
@@ -103,7 +104,6 @@ def load_model(model, f, rgb=False):
                     dict[k] = v
         else:
             dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        print('loaded params: ', len(dict.keys()))
         model_dict.update(dict)
         model.load_state_dict(model_dict)
 
